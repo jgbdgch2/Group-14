@@ -1,13 +1,68 @@
 import numpy as np
 #TODO Gridlines, elevations, BuildingData Class
+#TODO use assert statements in place of if statements
 
 class Schedule:
     listOfWallTypes = []
     listOfDoorTypes = []
     listOfWindowTypes = []
     
-    #TODO init function
-    #TODO append delete function for all lists
+    def __init__(self):
+        listOfWallTypes = []
+        listOfDoorTypes = []
+        listOfWindowTypes = []
+        
+    def append(self, element):
+        if type(element) == type(WallType()):
+            self.listOfWallTypes.append(element)
+            return 0;
+            
+        if type(element) == type(DoorType()):
+            self.listOfDoorTypes.append(element)
+            return 0;
+            
+        if type(element) == type(WindowType()):
+            self.listOfWindowTypes.append(element)
+            return 0;
+            
+        raise Exception("Incompatiable object passed to append to schedule")
+        
+    def searchByType(self, typeNumber):
+    
+        assert type(typeNumber) == type(0)
+        
+        for element in self.listOfWallTypes:
+            if element.wallType == typeNumber:
+                return element
+                
+        for element in self.listOfDoorTypes:
+            if element.doorType == typeNumber:
+                return element
+                
+        for element in self.listOfWindowTypes:
+            if element.windowType == typeNumber:
+                return element
+        return -1
+                
+    def deleteByType(self, typeNumber):
+        
+        assert type(typeNumber) == type(0)
+    
+        for element in self.listOfWallTypes:
+            if element.wallType == typeNumber:
+                listOfWallTypes.remove(element)
+                return 0;
+                
+        for element in self.listOfDoorTypes:
+            if element.doorType == typeNumber:
+                listOfDoorTypes.remove(element)
+                return 0
+                
+        for element in self.listOfWindowTypes:
+            if element.windowType == typeNumber:
+                listOfWindowTypes.remove(element)
+                return 0
+        return -1
         
 class WallType:
 
@@ -28,15 +83,16 @@ class WallType:
                 
         #bound and type checking goes here
         #TODO finish type checking and bounds checking
-        if (type(thickness) != type(1.0)):
-            raise Exception("Thickness must be a float")
-            
-        if (measurement_system_flag != "IMPERIAL_UNITS" && measurement_system_flag != "METRIC_UNITS"):
-            raise Exception("Measurement system must be 'IMPERIAL_UNITS' or 'METRIC_UNITS'")
+        
+        assert type(thickness) == type(1.0), f"Thickness must be a float, got type {type(thickness)}"
+        assert measurement_system_flag == "IMPERIAL_UNITS" or \
+            measurement_system_flag == "METRIC_UNITS", \
+            f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", got "{measurement_system_flag}" of type {type(measurement_system_flag)}'
         
         self.wallType = wallType
         self.name = name
         self.thickness = thickness
+        self.measurement_system_flag = measurement_system_flag
 
 class DoorType:
 
@@ -59,14 +115,11 @@ class DoorType:
                 
         #bound and type checking goes here
         #TODO finish type checking and bounds checking
-        if (type(height) != type(1.0)):
-            raise Exception("Height must be a float")
-            
-        if (type(width) != type(1.0)):
-            raise Exception("Width must be a float")
-        
-        if (measurement_system_flag != "IMPERIAL_UNITS" && measurement_system_flag != "METRIC_UNITS"):
-            raise Exception("Measurement system must be 'IMPERIAL_UNITS' or 'METRIC_UNITS'")
+        assert type(height) == type(1.0), f"Height must be a float, got type {type(height)}"
+        assert type(width) == type(1.0), f"Width must be a float, got type {type(width)}"
+        assert measurement_system_flag == "IMPERIAL_UNITS" or \
+            measurement_system_flag == "METRIC_UNITS", \
+            f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", got "{measurement_system_flag}" of type {type(measurement_system_flag)}'
         
         self.doorType = doorType
         self.name = name
@@ -87,29 +140,24 @@ class WindowType:
     information = []
     measurement_system_flag = "IMPERIAL_UNITS"
     
-        def __init__(self, \
+    def __init__(self, \
                 windowType=-1, \
                 name="Nameless", \
                 height=-1.0, \
-                width=-1.0, \ 
+                width=-1.0, \
                 stillHeight=-1.0, \
                 measurement_system_flag="IMPERIAL_UNITS"):
-                
+            
         #bound and type checking goes here
         #TODO finish type checking and bounds checking
-        if (type(height) != type(1.0)):
-            raise Exception("Height must be a float")
-            
-        if (type(width) != type(1.0)):
-            raise Exception("Width must be a float")
-            
-        if (type(stillHeight) != type(1.0)):
-            raise Exception("Still height must be a float")
-            
-        if (measurement_system_flag != "IMPERIAL_UNITS" && measurement_system_flag != "METRIC_UNITS"):
-            raise Exception("Measurement system must be 'IMPERIAL_UNITS' or 'METRIC_UNITS'")
+        assert type(height) == type(1.0), f"Height must be a float, got type {type(height)}"
+        assert type(width) == type(1.0), f"Width must be a float, got type {type(width)}"
+        assert type(stillHeight) == type(1.0), f"Still height must be a float, got type {type(stillHeight)}"
+        assert measurement_system_flag == "IMPERIAL_UNITS" or \
+            measurement_system_flag == "METRIC_UNITS", \
+            f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", got "{measurement_system_flag}" of type {type(measurement_system_flag)}'
         
-        self.doorType = windowType
+        self.windowType = windowType
         self.name = name
         self.height = height
         self.width = width
@@ -129,6 +177,22 @@ class Story:
         self.bottomElevation = bottomElevation
         self.topElevation = topElevation
         
+    #TODO append delete search return functions for all 3 lists
+    def append(self, element):
+        if type(element) == type(Wall()):
+            self.listOfWalls.append(element)
+            return 0;
+            
+        if type(element) == type(Door()):
+            self.listOfDoors.append(element)
+            return 0;
+            
+        if type(element) == type(Window()):
+            self.listOfWindows.append(element)
+            return 0;
+            
+        raise Exception("Incompatiable object passed to append to schedule")
+        
     def getBottomElevation(self):
         return this.bottomElevation
         
@@ -141,8 +205,6 @@ class Story:
     def setTopElevation(self, topElevation):
         this.topElevation = topElevation
         
-    #TODO append delete search return functions for all 3 lists
-
 class Wall:
 
     xZero = -1
@@ -192,7 +254,6 @@ class Door:
     xPos = -1
     yPos = -1
     normalVector = -1.0
-    hinge = "left"
     
     #reference to DoorType object
     doorType = -1
@@ -208,15 +269,13 @@ class Door:
     def __init__(self, \
                 pos=(-1, -1), \
                 normalVector=-1.0, \
-                hinge="left", \
                 doorType=-1, \
-                embededWall=-1);
+                embededWall=-1):
         
         #TODO bounds and type checks
         
         self.xPos, self.yPos = pos
         self.normalVector = normalVector
-        self.hinge = hinge
         self.doorType = doorType
         self.embededWall = embededWall
         
@@ -225,7 +284,7 @@ class Door:
         
     def setPos(self, cood):
         self.xPos, self.yPos = cood
-        
+
 class Window:
 
     xPos = -1
@@ -246,14 +305,14 @@ class Window:
     def __init__(self, \
                 pos=(-1, -1), \
                 normalVector=-1.0, \
-                doorType=-1, \
-                embededWall=-1);
+                windowType=-1, \
+                embededWall=-1):
         
         #TODO bounds and type checks
         
         self.xPos, self.yPos = pos
         self.normalVector = normalVector
-        self.doorType = doorType
+        self.windowType = windowType
         self.embededWall = embededWall
         
     def getPos(self):
@@ -262,6 +321,36 @@ class Window:
     def setPos(self, cood):
         self.xPos, self.yPos = cood
         
-Tim = WallType(wallType=17, name="das conk creet baybee", thickness = 12.0)
-Dima = Wall(wallType = Tim)
-print(Dima.wallType.name)
+        
+#assertion statements to make sure everything works properly
+buildingSchedule = Schedule()
+
+timWallType = WallType(wallType=17, name="8 inches of tungsten", thickness=8.0)
+tomDoorType = DoorType(doorType=34, name="a single sheet of paper", height=60.0, width=40.0)
+dimaWindowType = WindowType(windowType=98, name="German Window", height=80.0, width=20.0, stillHeight=80.0)
+
+buildingSchedule.append(timWallType)
+buildingSchedule.append(tomDoorType)
+buildingSchedule.append(dimaWindowType)
+
+assert len(buildingSchedule.listOfDoorTypes) == 1
+assert len(buildingSchedule.listOfWallTypes) == 1
+assert len(buildingSchedule.listOfWindowTypes) == 1
+
+assert type(buildingSchedule.searchByType(17)) == type(WallType())
+assert type(buildingSchedule.searchByType(34)) == type(DoorType())
+assert type(buildingSchedule.searchByType(98)) == type(WindowType())
+
+firstFloor = Story(topElevation=-1, bottomElevation=-1)
+
+jacksonWall = Wall()
+johnsonDoor = Door()
+grantWindow = Window()
+
+firstFloor.append(jacksonWall)
+firstFloor.append(johnsonDoor)
+firstFloor.append(grantWindow)
+
+assert len(firstFloor.listOfDoors) == 1
+assert len(firstFloor.listOfWalls) == 1
+assert len(firstFloor.listOfWindows) == 1
