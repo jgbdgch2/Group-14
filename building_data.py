@@ -238,8 +238,7 @@ class Wall:
         
     def getPosOne(self):
         return (self.xOne, self.yOne)
-        
-    # TODO return thickness
+
     def getThickness(self):
         return self.wallType.getThickness()
         
@@ -323,6 +322,7 @@ class Window:
         
         
 #assertion statements to make sure everything works properly
+#not comprehensive, please add too
 buildingSchedule = Schedule()
 
 timWallType = WallType(wallType=17, name="8 inches of tungsten", thickness=8.0)
