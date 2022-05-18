@@ -1,8 +1,12 @@
 import numpy as np
 #TODO Gridlines, elevations, BuildingData Class
 #TODO use assert statements in place of if statements
+#TODO add more comments
+
+#Note: all members called measurement_system_flag must be "IMPERIAL_UNITS" or "METRIC_UNITS"
 
 class Schedule:
+    #3 seperate lists representing each schedule
     listOfWallTypes = []
     listOfDoorTypes = []
     listOfWindowTypes = []
@@ -12,6 +16,7 @@ class Schedule:
         listOfDoorTypes = []
         listOfWindowTypes = []
         
+    #Takes in WallType, DoorType, or WindowType class and adds it to the schedule
     def append(self, element):
         if type(element) == type(WallType()):
             self.listOfWallTypes.append(element)
@@ -27,6 +32,7 @@ class Schedule:
             
         raise Exception("Incompatiable object passed to append to schedule")
         
+    #Takes in type identification number and returns corresponding type, returns -1 if not found
     def searchByType(self, typeNumber):
     
         assert type(typeNumber) == type(0)
@@ -43,7 +49,8 @@ class Schedule:
             if element.windowType == typeNumber:
                 return element
         return -1
-                
+    
+    #Takes in type identification number and deletes
     def deleteByType(self, typeNumber):
         
         assert type(typeNumber) == type(0)
@@ -66,28 +73,35 @@ class Schedule:
         
 class WallType:
 
-    #integer representing wall type
+    #Integer representing wall type
     wallType = np.empty
     name = ""
     thickness = -1.0
     
-    #str array of info about wall type
+    #Str array of info about wall type
     information = []
     measurement_system_flag = "IMPERIAL_UNITS"
     
+    #Takes in int, string, float, string
     def __init__(self, \
                 wallType=-1, \
                 name="Nameless", \
                 thickness=-1.0, \
                 measurement_system_flag="IMPERIAL_UNITS"):
                 
-        #bound and type checking goes here
-        #TODO finish type checking and bounds checking
+        #Bound and type checking goes here
+        assert type(wallType) == type(1), f"Wall type must be integer {type(wallType)}."
+        assert wallType >= -1 and wallType != 0, f"wallType must be positive."
         
-        assert type(thickness) == type(1.0), f"Thickness must be a float, got type {type(thickness)}"
+        assert type(name) == type(""), f"Name must be type string, got type {type(name)}." 
+        
+        assert type(thickness) == type(1.0), f"thickness must be a float, got type {type(thickness)}."
+        assert thickness > 0 or thickness == -1.0, f"Thickness must be positive."
+        
         assert measurement_system_flag == "IMPERIAL_UNITS" or \
             measurement_system_flag == "METRIC_UNITS", \
-            f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", got "{measurement_system_flag}" of type {type(measurement_system_flag)}'
+            f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", \
+            got "{measurement_system_flag}" of type {type(measurement_system_flag)}.'
         
         self.wallType = wallType
         self.name = name
@@ -96,13 +110,13 @@ class WallType:
 
 class DoorType:
 
-    #integer representing door type
+    #Integer representing door type
     doorType = np.empty
     name = ""
     height = 0.0;
     width = 0.0;
     
-    #str array of info about wall type
+    #Str array of info about wall type
     information = []
     measurement_system_flag = "IMPERIAL_UNITS"
     
@@ -113,13 +127,22 @@ class DoorType:
                 width=-1.0, \
                 measurement_system_flag="IMPERIAL_UNITS"):
                 
-        #bound and type checking goes here
-        #TODO finish type checking and bounds checking
-        assert type(height) == type(1.0), f"Height must be a float, got type {type(height)}"
-        assert type(width) == type(1.0), f"Width must be a float, got type {type(width)}"
+        #Bound and type checking goes here
+        assert type(doorType) == type(1), f"doorType must be integer {type(doorType)}."
+        assert doorType >= -1 and doorType != 0, f"doorType must be positive."
+        
+        assert type(name) == type(""), f"Name must be type string, got type {type(name)}." 
+        
+        assert type(height) == type(1.0), f"height must be a float, got type {type(height)}."
+        assert height > 0 or height == -1.0, f"height must be positive."
+        
+        assert type(width) == type(1.0), f"width must be a float, got type {type(width)}."
+        assert width > 0 or width == -1.0, f"width must be positive."
+        
         assert measurement_system_flag == "IMPERIAL_UNITS" or \
             measurement_system_flag == "METRIC_UNITS", \
-            f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", got "{measurement_system_flag}" of type {type(measurement_system_flag)}'
+            f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", \
+            got "{measurement_system_flag}" of type {type(measurement_system_flag)}.' of type {type(measurement_system_flag)}'
         
         self.doorType = doorType
         self.name = name
@@ -129,14 +152,14 @@ class DoorType:
         
 class WindowType:
 
-    #integer representing door type
+    #Integer representing door type
     windowType = np.empty
     name = ""
     height = 0.0;
     width = 0.0;
     stillHeight = 0.0
     
-    #str array of info about wall type
+    #Str array of info about wall type
     information = []
     measurement_system_flag = "IMPERIAL_UNITS"
     
@@ -148,15 +171,26 @@ class WindowType:
                 stillHeight=-1.0, \
                 measurement_system_flag="IMPERIAL_UNITS"):
             
-        #bound and type checking goes here
-        #TODO finish type checking and bounds checking
-        assert type(height) == type(1.0), f"Height must be a float, got type {type(height)}"
-        assert type(width) == type(1.0), f"Width must be a float, got type {type(width)}"
-        assert type(stillHeight) == type(1.0), f"Still height must be a float, got type {type(stillHeight)}"
+        #Bound and type checking goes here
+        assert type(windowType) == type(1), f"windowType must be integer {type(windowType)}."
+        assert windowType >= -1 and windowType != 0, f"windowType must be positive."
+        
+        assert type(name) == type(""), f"Name must be type string, got type {type(name)}." 
+        
+        assert type(height) == type(1.0), f"height must be a float, got type {type(height)}."
+        assert height > 0 or height == -1.0, f"height must be positive."
+        
+        assert type(width) == type(1.0), f"width must be a float, got type {type(width)}."
+        assert width > 0 or width == -1.0, f"width must be positive."
+        
+        assert type(stillHeight) == type(1.0), f"stillHeight must be a float, got type {type(stillHeight)}."
+        assert stillHeight > 0 or stillHeight == -1.0, f"stillHeight must be positive."
+        
         assert measurement_system_flag == "IMPERIAL_UNITS" or \
             measurement_system_flag == "METRIC_UNITS", \
-            f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", got "{measurement_system_flag}" of type {type(measurement_system_flag)}'
-        
+            f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", \
+            got "{measurement_system_flag}" of type {type(measurement_system_flag)}.' of type {type(measurement_system_flag)}'
+            
         self.windowType = windowType
         self.name = name
         self.height = height
@@ -178,6 +212,8 @@ class Story:
         self.topElevation = topElevation
         
     #TODO append delete search return functions for all 3 lists
+    
+    #Takes in Wall, Door or Window object and adds it to the story
     def append(self, element):
         if type(element) == type(Wall()):
             self.listOfWalls.append(element)
@@ -193,6 +229,7 @@ class Story:
             
         raise Exception("Incompatiable object passed to append to schedule")
         
+    #Meaningless functions until I implement elevations
     def getBottomElevation(self):
         return this.bottomElevation
         
@@ -213,14 +250,14 @@ class Wall:
     xOne = -1
     yOne = -1
     
-    #reference to WallType object
+    #Reference to WallType object
     wallType = -1
     
-    #optional field, if left empty will default to the distance between elevation markers
+    #Optional field, if left empty will default to the distance between elevation markers
     height = -1
     
-    #str array of info about wall
-    #includes tags
+    #Str array of info about wall
+    #Includes tags
     information = []
     
     def __init__(self, \
@@ -233,9 +270,11 @@ class Wall:
         self.xOne, self.yOne = cood1
         self.wallType = wallType
     
+    #Returns tuple of coordinate of one end of the wall
     def getPosZero(self):
         return (self.xZero, self.yZero)
         
+    #Returns tuple of coordinate of the other end of the wall
     def getPosOne(self):
         return (self.xOne, self.yOne)
 
@@ -254,15 +293,15 @@ class Door:
     yPos = -1
     normalVector = -1.0
     
-    #reference to DoorType object
+    #Reference to DoorType object
     doorType = -1
     
-    #reference to Wall object
-    #consider removing
+    #Reference to Wall object
+    #Consider removing
     embededWall = -1
     
-    #str array of info about wall
-    #includes tags
+    #Str array of info about wall
+    #Includes tags
     information = []
     
     def __init__(self, \
@@ -278,6 +317,7 @@ class Door:
         self.doorType = doorType
         self.embededWall = embededWall
         
+    #Returns tuple of coordiantes of the door
     def getPos(self):
         return (self.xPos, self.yPos)
         
@@ -290,15 +330,15 @@ class Window:
     yPos = -1
     normalVector = -1.0
     
-    #reference to WindowType object
+    #Reference to WindowType object
     windowType = -1
     
-    #reference to Wall object
-    #consider removing
+    #Reference to Wall object
+    #Consider removing
     embededWall = -1
     
-    #str array of info about wall
-    #includes tags
+    #Str array of info about wall
+    #Includes tags
     information = []
     
     def __init__(self, \
@@ -314,6 +354,7 @@ class Window:
         self.windowType = windowType
         self.embededWall = embededWall
         
+    #Returns tuple of coordinate of the window
     def getPos(self):
         return (self.xPos, self.yPos)
         
@@ -322,7 +363,7 @@ class Window:
         
         
 #assertion statements to make sure everything works properly
-#not comprehensive, please add too
+#not comprehensive, please add to
 buildingSchedule = Schedule()
 
 timWallType = WallType(wallType=17, name="8 inches of tungsten", thickness=8.0)
