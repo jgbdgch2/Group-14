@@ -5,6 +5,46 @@ import numpy as np
 
 #Note: all members called measurement_system_flag must be "IMPERIAL_UNITS" or "METRIC_UNITS"
 
+class BuildingData:
+    #The 3 lists are lists of their respective classes
+    #Building schedule is a Schedule object which is create in __init__
+    listOfGridlines = []
+    listofElevations = []
+    buildingSchedule = 0
+    listOfStories = []
+    
+    def __init__(self):
+        buildingSchedule = Schedule()
+        listOfStories = []
+        listOfGridlines = []
+        listofElevations = []
+    
+class Gridline:
+    point = (0.0, 0.0)
+    slope = 0.0
+    measurement_system_flag = "IMPERIAL_UNITS"
+    
+    def __init__(self, \
+                point = 
+
+class Elevation:
+    height = 0.0
+    measurement_system_flag = "IMPERIAL_UNITS"
+    
+    def __init__(self, \
+                height=-0.0, \
+                measurement_system_flag="IMPERIAL_UNITS"):
+        #type checking
+        assert type(height) == type(float), f"Height must be float, got type {type(height)}"
+        assert measurement_system_flag == "IMPERIAL_UNITS" or \
+            measurement_system_flag == "METRIC_UNITS", \
+            f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", \
+            got "{measurement_system_flag}" of type {type(measurement_system_flag)}. of type {type(measurement_system_flag)}'
+        
+        self.height = height
+        self.measurement_system_flag = measurement_system_flag
+    
+
 class Schedule:
     #3 seperate lists representing each schedule
     listOfWallTypes = []
@@ -17,16 +57,20 @@ class Schedule:
         listOfWindowTypes = []
         
     #Takes in WallType, DoorType, or WindowType class and adds it to the schedule
+    #Do not add types with a type number of -1
     def append(self, element):
         if type(element) == type(WallType()):
+            assert element.wallType != -1, f"WallType must have positive integer typeNumber to append to schedule, got {element.wallType}"
             self.listOfWallTypes.append(element)
             return 0;
             
         if type(element) == type(DoorType()):
+            assert element.doorType != -1, f"DoorType must have positive integer typeNumber to append to schedule, got {element.doorType}"
             self.listOfDoorTypes.append(element)
             return 0;
             
         if type(element) == type(WindowType()):
+            assert element.windowType != -1, f"WindowType must have positive integer typeNumber to append to schedule, got {element.windowType}"
             self.listOfWindowTypes.append(element)
             return 0;
             
@@ -74,7 +118,7 @@ class Schedule:
 class WallType:
 
     #Integer representing wall type
-    wallType = np.empty
+    wallType = -1
     name = ""
     thickness = -1.0
     
@@ -90,7 +134,7 @@ class WallType:
                 measurement_system_flag="IMPERIAL_UNITS"):
                 
         #Bound and type checking goes here
-        assert type(wallType) == type(1), f"Wall type must be integer {type(wallType)}."
+        assert type(wallType) == type(1), f"Wall type must be integer, got {type(wallType)}."
         assert wallType >= -1 and wallType != 0, f"wallType must be positive."
         
         assert type(name) == type(""), f"Name must be type string, got type {type(name)}." 
@@ -111,7 +155,7 @@ class WallType:
 class DoorType:
 
     #Integer representing door type
-    doorType = np.empty
+    doorType = -1
     name = ""
     height = 0.0;
     width = 0.0;
@@ -142,7 +186,7 @@ class DoorType:
         assert measurement_system_flag == "IMPERIAL_UNITS" or \
             measurement_system_flag == "METRIC_UNITS", \
             f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", \
-            got "{measurement_system_flag}" of type {type(measurement_system_flag)}.' of type {type(measurement_system_flag)}'
+            got "{measurement_system_flag}" of type {type(measurement_system_flag)}. of type {type(measurement_system_flag)}'
         
         self.doorType = doorType
         self.name = name
@@ -153,7 +197,7 @@ class DoorType:
 class WindowType:
 
     #Integer representing door type
-    windowType = np.empty
+    windowType = -1
     name = ""
     height = 0.0;
     width = 0.0;
@@ -189,7 +233,7 @@ class WindowType:
         assert measurement_system_flag == "IMPERIAL_UNITS" or \
             measurement_system_flag == "METRIC_UNITS", \
             f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", \
-            got "{measurement_system_flag}" of type {type(measurement_system_flag)}.' of type {type(measurement_system_flag)}'
+            got "{measurement_system_flag}" of type {type(measurement_system_flag)}. of type {type(measurement_system_flag)}'
             
         self.windowType = windowType
         self.name = name
@@ -261,11 +305,12 @@ class Wall:
     information = []
     
     def __init__(self, \
-                cood0=(-1, -1), \
-                cood1=(-1, -1), \
+                cood0=(np.inf, np.inf), \
+                cood1=(np.inf, np.inf), \
                 wallType=-1, \
                 height=-1):
-                
+        #TODO: bounds checking        
+        
         self.xZero, self.xZero = cood0
         self.xOne, self.yOne = cood1
         self.wallType = wallType
