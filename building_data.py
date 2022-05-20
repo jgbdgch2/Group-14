@@ -2,6 +2,9 @@ import numpy as np
 #TODO Gridlines, elevations, BuildingData Class
 #TODO use assert statements in place of if statements
 #TODO add more comments
+#TODO replace default out-of-bounds -1 value with np.inf
+#todo figure out gridlines: 0 to 180? -90 to 90?
+#todo search schedule by name
 
 #Note: all members called measurement_system_flag must be "IMPERIAL_UNITS" or "METRIC_UNITS"
 
@@ -14,20 +17,23 @@ class BuildingData:
     listOfStories = []
     
     def __init__(self):
-        buildingSchedule = Schedule()
-        listOfStories = []
-        listOfGridlines = []
-        listofElevations = []
+        self.buildingSchedule = Schedule()
+        self.listOfStories = []
+        self.listOfGridlines = []
+        self.listofElevations = []
     
 class Gridline:
+    #Todo talk about it
+    #name=""
     point = (0.0, 0.0)
+    # in degrees, between 0.0 and 180.0 with 0.0 being horizontal and 90.0 being vertical
     slope = 0.0
     measurement_system_flag = "IMPERIAL_UNITS"
-    
-    def __init__(self, \
-                point = 
+   
 
 class Elevation:
+    #Todo, fix name
+    name=""
     height = 0.0
     measurement_system_flag = "IMPERIAL_UNITS"
     
@@ -58,6 +64,7 @@ class Schedule:
         
     #Takes in WallType, DoorType, or WindowType class and adds it to the schedule
     #Do not add types with a type number of -1
+    #Todo make sure type number is unique
     def append(self, element):
         if type(element) == type(WallType()):
             assert element.wallType != -1, f"WallType must have positive integer typeNumber to append to schedule, got {element.wallType}"
@@ -140,7 +147,7 @@ class WallType:
         assert type(name) == type(""), f"Name must be type string, got type {type(name)}." 
         
         assert type(thickness) == type(1.0), f"thickness must be a float, got type {type(thickness)}."
-        assert thickness > 0 or thickness == -1.0, f"Thickness must be positive."
+        assert thickness > 0.0 or thickness == -1.0, f"Thickness must be positive."
         
         assert measurement_system_flag == "IMPERIAL_UNITS" or \
             measurement_system_flag == "METRIC_UNITS", \
@@ -178,10 +185,10 @@ class DoorType:
         assert type(name) == type(""), f"Name must be type string, got type {type(name)}." 
         
         assert type(height) == type(1.0), f"height must be a float, got type {type(height)}."
-        assert height > 0 or height == -1.0, f"height must be positive."
+        assert height > 0.0 or height == -1.0, f"height must be positive."
         
         assert type(width) == type(1.0), f"width must be a float, got type {type(width)}."
-        assert width > 0 or width == -1.0, f"width must be positive."
+        assert width > 0.0 or width == -1.0, f"width must be positive."
         
         assert measurement_system_flag == "IMPERIAL_UNITS" or \
             measurement_system_flag == "METRIC_UNITS", \
@@ -222,13 +229,13 @@ class WindowType:
         assert type(name) == type(""), f"Name must be type string, got type {type(name)}." 
         
         assert type(height) == type(1.0), f"height must be a float, got type {type(height)}."
-        assert height > 0 or height == -1.0, f"height must be positive."
+        assert height > 0.0 or height == -1.0, f"height must be positive."
         
         assert type(width) == type(1.0), f"width must be a float, got type {type(width)}."
-        assert width > 0 or width == -1.0, f"width must be positive."
+        assert width > 0.0 or width == -1.0, f"width must be positive."
         
         assert type(stillHeight) == type(1.0), f"stillHeight must be a float, got type {type(stillHeight)}."
-        assert stillHeight > 0 or stillHeight == -1.0, f"stillHeight must be positive."
+        assert stillHeight > 0.0 or stillHeight == -1.0, f"stillHeight must be positive."
         
         assert measurement_system_flag == "IMPERIAL_UNITS" or \
             measurement_system_flag == "METRIC_UNITS", \
@@ -251,6 +258,7 @@ class Story:
     topElevation = -1
     
     #TODO type checking
+    #todo update this
     def __init__(self, bottomElevation=-1, topElevation=-1):
         self.bottomElevation = bottomElevation
         self.topElevation = topElevation
@@ -288,6 +296,7 @@ class Story:
         
 class Wall:
 
+    #todo make float
     xZero = -1
     yZero = -1
     
@@ -411,6 +420,8 @@ class Window:
 #not comprehensive, please add to
 buildingSchedule = Schedule()
 
+typeToBeFound = 17
+
 timWallType = WallType(wallType=17, name="8 inches of tungsten", thickness=8.0)
 tomDoorType = DoorType(doorType=34, name="a single sheet of paper", height=60.0, width=40.0)
 dimaWindowType = WindowType(windowType=98, name="German Window", height=80.0, width=20.0, stillHeight=80.0)
@@ -423,7 +434,7 @@ assert len(buildingSchedule.listOfDoorTypes) == 1
 assert len(buildingSchedule.listOfWallTypes) == 1
 assert len(buildingSchedule.listOfWindowTypes) == 1
 
-assert type(buildingSchedule.searchByType(17)) == type(WallType())
+assert type(buildingSchedule.searchByType(typeToBeFound)) == type(WallType())
 assert type(buildingSchedule.searchByType(34)) == type(DoorType())
 assert type(buildingSchedule.searchByType(98)) == type(WindowType())
 
