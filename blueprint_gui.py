@@ -3,18 +3,23 @@ import os.path
 import PIL.Image
 import io
 import base64
+import ctypes
+import platform
+# import building_data as bd
 
-# Image handling
-def convert_to_bytes(file_or_bytes, resize=None):
+
+# function for DPI awareness for increasing GUI resolution
+def make_dpi_aware():
+    if int(platform.release()) >= 8:
+        ctypes.windll.shcore.SetProcessDpiAwareness(True)
+
+# Image handling resize
+def image_formating(file_or_bytes, resize=None):
     '''
-    Will convert into bytes and optionally resize an image that is a file or a base64 bytes object.
-    Turns into  PNG format in the process so that can be displayed by tkinter
+    Turns into  PNG format so that it can be displayed by tkinter
     :param file_or_bytes: either a string filename or a bytes base64 image object
-    :type file_or_bytes:  (Union[str, bytes])
     :param resize:  optional new size
     :type resize: (Tuple[int, int] or None)
-    :return: (bytes) a byte-string object
-    :rtype: (bytes)
     '''
     if isinstance(file_or_bytes, str):
         img = PIL.Image.open(file_or_bytes)
@@ -30,12 +35,22 @@ def convert_to_bytes(file_or_bytes, resize=None):
         new_width, new_height = resize
         scale = min(new_height/cur_height, new_width/cur_width)
         img = img.resize((int(cur_width*scale), int(cur_height*scale)), PIL.Image.ANTIALIAS)
+
+    return img
+
+# Image handling
+def convert_to_bytes(img):
+    '''
+    Will convert into bytes.
+    :return: (bytes) a byte-string object
+    :rtype: (bytes)
+    '''
     bio = io.BytesIO()
     img.save(bio, format="PNG")
     del img
     return bio.getvalue()
 
-
+make_dpi_aware()  # This makes the resolution better for high res screens
 
 # --------------------------------- Define Layout ---------------------------------
 # First is the top menu
@@ -52,7 +67,14 @@ left_col = [[sg.Text('', size=(30, 1), key='-FOLDER-')],
 images_col = [[sg.Push(), sg.Text('Open a new project', key='-TOUT-'), sg.Push()],
               [sg.Image(key='-IMAGE1-')],
               [sg.Text('_'*60, key='-Hdivider-')],
-              [sg.Image(key='-IMAGE2-')]]
+              [sg.Graph(
+                  canvas_size=(0, 0),
+                  graph_bottom_left=(0, 0),
+                  graph_top_right=(800, 800),
+                  key="-GRAPH-",
+                  change_submits=True,  # mouse click events
+                  background_color='white',
+                  drag_submits=True)]]
 
 
 # ----- Full layout -----
@@ -63,6 +85,8 @@ layout = [[sg.Menu(menu_def, tearoff=False, key='-MENU BAR-')],
 window = sg.Window('Blueprint Conversion', layout, resizable=True)
 
 # ----- Run the Event Loop -----
+dragging = False
+start_point = end_point = None
 # --------------------------------- Event Loop ---------------------------------
 while True:
     event, values = window.read()
@@ -84,9 +108,10 @@ while True:
         try:
             filename = os.path.join(folder, values['-FILE LIST-'][0])
             window['-TOUT-'].update('')
-            new_size = 400
-            window['-IMAGE1-'].update(data=convert_to_bytes(filename, resize=(new_size, new_size)))
-            window['-Hdivider-'].update('_'*int(new_size/7))
+            new_size = 1000
+            filename = image_formating(filename, resize=(new_size, new_size))
+            window['-IMAGE1-'].update(data=convert_to_bytes(filename))
+            window['-Hdivider-'].update('_'*int(new_size/16))
 
         except Exception as E:
             print('** Error {} **'.format(E))
@@ -94,10 +119,29 @@ while True:
     elif event == '-Convert-' and len(values['-FILE LIST-']) > 0:    # There is a file to be converted
         try:
             filename = os.path.join(folder, values['-FILE LIST-'][0])
-            new_size = 400
-            window['-IMAGE2-'].update(data=convert_to_bytes(filename, resize=(new_size, new_size)))
+            new_size = 1000
+            filename = image_formating(filename, resize=(new_size, new_size))
+            graph = window["-GRAPH-"]  # type: sg.Graph
+            graph.set_size(filename.size)
+            graph.change_coordinates((0,0), (new_size, new_size))
+            graph.draw_image(data=convert_to_bytes(filename), location=(0,new_size))
         except Exception as E:
             print('** Error {} **'.format(E))
             pass        # something weird happened making the full filename
+    elif event == "-GRAPH-":  # if there's a "Graph" event, then it's a mouse
+        x, y = values["-GRAPH-"]
+        if not dragging:
+            start_point = (x, y)
+            dragging = True
+            lastxy = x, y
+        else:
+            end_point = (x, y)
+    elif event.endswith('+UP'):  # The dragging has ended because mouse up
+        x, y = values["-GRAPH-"]
+        end_point = (x, y)
+        start_x, start_y = start_point
+        info = 'start X: {} start Y: {}\nend X: {}  end Y: {}'.format(start_x, start_y, x, y)
+        sg.popup('Dragging Done!\n{}'.format(info))
+        dragging = False
 # --------------------------------- Close & Exit ---------------------------------
 window.close()
