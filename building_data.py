@@ -1,6 +1,6 @@
 import numpy as np
 #TODO add more comments
-#TODO replace default out-of-bounds -1 value with np.inf
+#TODO lookup hit should return "None" instead of -1
 
 #Note: all members called measurement_system_flag must be "IMPERIAL_UNITS" or "METRIC_UNITS"
 
@@ -128,7 +128,7 @@ class Schedule:
                 return element
         return -1
         
-    def searchByType(self, string):
+    def searchByName(self, string):
     
         assert type(string) == type("")
         
@@ -441,8 +441,8 @@ class Window:
     yPos = np.inf
     
     #refers to the angle normal vector, such that,
-    #0.0 represents pointing right, and the outside face of the door is pointing left
-    #90.0 represents pointing down, and the outside face of the door is pointing up
+    #0.0 represents pointing right, and the outside face of the window is pointing left
+    #90.0 represents pointing down, and the outside face of the window is pointing up
     normalVector = np.inf
     
     #Reference to WindowType object
