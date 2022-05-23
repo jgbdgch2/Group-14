@@ -1,10 +1,82 @@
 import numpy as np
-#TODO Gridlines, elevations, BuildingData Class
-#TODO use assert statements in place of if statements
 #TODO add more comments
+#TODO replace default out-of-bounds -1 value with np.inf
 
 #Note: all members called measurement_system_flag must be "IMPERIAL_UNITS" or "METRIC_UNITS"
 
+class BuildingData:
+    #The 3 lists are lists of their respective classes
+    #Building schedule is a Schedule object which is create in __init__
+    listOfGridlines = []
+    listOfElevations = []
+    buildingSchedule = 0
+    listOfStories = []
+    
+    def __init__(self):
+        self.buildingSchedule = Schedule()
+        self.listOfStories = []
+        self.listOfGridlines = []
+        self.listOfElevations = []
+        
+    #TODO delete, search functions
+        
+    def appendGridline(self, cood0, cood1, measurement_system_flag="IMPERIAL_UNITS"):
+        buffer = Gridline(cood0, cood1, measurement_system_flag)
+        self.listOfGridlines.append(buffer)
+        
+    #TODO check if elevation already exists, if it does ignore it
+    def appendElevation(self, height, measurement_system_flag="IMPERIAL_UNITS"):
+        buffer = Elevation(height, measurement_system_flag)
+        self.listOfElevations.append(buffer)
+        
+    def appendStory(self, elevation0, elevation1):
+        buffer = Story(elevation0, elevation1)
+        self.listOfStories.append(buffer)
+        
+class Gridline:
+    #The thing that goes inside the bubble
+    name=""
+    
+    cood0 = (np.inf, np.inf)
+    cood1 = (np.inf, np.inf)
+    
+    measurement_system_flag = "IMPERIAL_UNITS"
+    
+    def __init__(self, cood0=(np.inf, np.inf), cood1=(np.inf, np.inf), measurement_system_flag="IMPERIAL_UNITS"):
+        
+        X0, Y0 = cood0
+        X1, Y1 = cood1
+        #type and bounds checking
+        assert type(X0) == type(0.0) and type(Y0) == type(0.0), f"cood0 must be a tuple of floats, got {type(X0)} and {type(Y0)}."
+        assert type(X1) == type(0.0) and type(Y1) == type(0.0), f"cood1 must be a tuple of floats, got {type(X1)} and {type(Y1)}."
+        assert measurement_system_flag == "IMPERIAL_UNITS" or \
+            measurement_system_flag == "METRIC_UNITS", \
+            f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", \
+            got "{measurement_system_flag}" of type {type(measurement_system_flag)}. of type {type(measurement_system_flag)}'
+            
+        self.cood0 = cood0
+        self.cood1 = cood1
+        self.measurement_system_flag = measurement_system_flag
+   
+class Elevation:
+
+    name=""
+    height = 0.0
+    measurement_system_flag = "IMPERIAL_UNITS"
+    
+    def __init__(self, \
+                height=-0.0, \
+                measurement_system_flag="IMPERIAL_UNITS"):
+        #type checking
+        assert type(height) == type(0.0), f"Height must be float, got type {type(height)}"
+        assert measurement_system_flag == "IMPERIAL_UNITS" or \
+            measurement_system_flag == "METRIC_UNITS", \
+            f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", \
+            got "{measurement_system_flag}" of type {type(measurement_system_flag)}. of type {type(measurement_system_flag)}'
+        
+        self.height = height
+        self.measurement_system_flag = measurement_system_flag
+    
 class Schedule:
     #3 seperate lists representing each schedule
     listOfWallTypes = []
@@ -17,16 +89,22 @@ class Schedule:
         listOfWindowTypes = []
         
     #Takes in WallType, DoorType, or WindowType class and adds it to the schedule
+    #Do not add types with a type number of -1
     def append(self, element):
+        assert self.searchByType(element.typeNumber) == -1
+    
         if type(element) == type(WallType()):
+            assert element.typeNumber != -1, f"WallType must have positive integer typeNumber to append to schedule, got {element.wallType}"
             self.listOfWallTypes.append(element)
             return 0;
             
         if type(element) == type(DoorType()):
+            assert element.typeNumber != -1, f"DoorType must have positive integer typeNumber to append to schedule, got {element.doorType}"
             self.listOfDoorTypes.append(element)
             return 0;
             
         if type(element) == type(WindowType()):
+            assert element.typeNumber != -1, f"WindowType must have positive integer typeNumber to append to schedule, got {element.windowType}"
             self.listOfWindowTypes.append(element)
             return 0;
             
@@ -38,15 +116,32 @@ class Schedule:
         assert type(typeNumber) == type(0)
         
         for element in self.listOfWallTypes:
-            if element.wallType == typeNumber:
+            if element.typeNumber == typeNumber:
                 return element
                 
         for element in self.listOfDoorTypes:
-            if element.doorType == typeNumber:
+            if element.typeNumber == typeNumber:
                 return element
                 
         for element in self.listOfWindowTypes:
-            if element.windowType == typeNumber:
+            if element.typeNumber == typeNumber:
+                return element
+        return -1
+        
+    def searchByType(self, string):
+    
+        assert type(string) == type("")
+        
+        for element in self.listOfWallTypes:
+            if element.name == string:
+                return element
+                
+        for element in self.listOfDoorTypes:
+            if element.name == string:
+                return element
+                
+        for element in self.listOfWindowTypes:
+            if element.name == string:
                 return element
         return -1
     
@@ -56,17 +151,17 @@ class Schedule:
         assert type(typeNumber) == type(0)
     
         for element in self.listOfWallTypes:
-            if element.wallType == typeNumber:
+            if element.typeNumber == typeNumber:
                 listOfWallTypes.remove(element)
                 return 0;
                 
         for element in self.listOfDoorTypes:
-            if element.doorType == typeNumber:
+            if element.typeNumber == typeNumber:
                 listOfDoorTypes.remove(element)
                 return 0
                 
         for element in self.listOfWindowTypes:
-            if element.windowType == typeNumber:
+            if element.typeNumber == typeNumber:
                 listOfWindowTypes.remove(element)
                 return 0
         return -1
@@ -74,7 +169,7 @@ class Schedule:
 class WallType:
 
     #Integer representing wall type
-    wallType = np.empty
+    typeNumber = -1
     name = ""
     thickness = -1.0
     
@@ -84,26 +179,26 @@ class WallType:
     
     #Takes in int, string, float, string
     def __init__(self, \
-                wallType=-1, \
+                typeNumber=-1, \
                 name="Nameless", \
                 thickness=-1.0, \
                 measurement_system_flag="IMPERIAL_UNITS"):
                 
         #Bound and type checking goes here
-        assert type(wallType) == type(1), f"Wall type must be integer {type(wallType)}."
-        assert wallType >= -1 and wallType != 0, f"wallType must be positive."
+        assert type(typeNumber) == type(1), f"Wall type must be integer, got {type(typeNumber)}."
+        assert typeNumber >= -1 and typeNumber != 0, f"typeNumber must be positive."
         
         assert type(name) == type(""), f"Name must be type string, got type {type(name)}." 
         
         assert type(thickness) == type(1.0), f"thickness must be a float, got type {type(thickness)}."
-        assert thickness > 0 or thickness == -1.0, f"Thickness must be positive."
+        assert thickness > 0.0 or thickness == -1.0, f"Thickness must be positive."
         
         assert measurement_system_flag == "IMPERIAL_UNITS" or \
             measurement_system_flag == "METRIC_UNITS", \
             f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", \
             got "{measurement_system_flag}" of type {type(measurement_system_flag)}.'
         
-        self.wallType = wallType
+        self.typeNumber = typeNumber
         self.name = name
         self.thickness = thickness
         self.measurement_system_flag = measurement_system_flag
@@ -111,7 +206,7 @@ class WallType:
 class DoorType:
 
     #Integer representing door type
-    doorType = np.empty
+    typeNumber = -1
     name = ""
     height = 0.0;
     width = 0.0;
@@ -121,30 +216,30 @@ class DoorType:
     measurement_system_flag = "IMPERIAL_UNITS"
     
     def __init__(self, \
-                doorType=-1, \
+                typeNumber=-1, \
                 name="Nameless", \
                 height=-1.0, \
                 width=-1.0, \
                 measurement_system_flag="IMPERIAL_UNITS"):
                 
         #Bound and type checking goes here
-        assert type(doorType) == type(1), f"doorType must be integer {type(doorType)}."
-        assert doorType >= -1 and doorType != 0, f"doorType must be positive."
+        assert type(typeNumber) == type(1), f"typeNumber must be integer {type(typeNumber)}."
+        assert typeNumber >= -1 and typeNumber != 0, f"typeNumber must be positive."
         
         assert type(name) == type(""), f"Name must be type string, got type {type(name)}." 
         
         assert type(height) == type(1.0), f"height must be a float, got type {type(height)}."
-        assert height > 0 or height == -1.0, f"height must be positive."
+        assert height > 0.0 or height == -1.0, f"height must be positive."
         
         assert type(width) == type(1.0), f"width must be a float, got type {type(width)}."
-        assert width > 0 or width == -1.0, f"width must be positive."
+        assert width > 0.0 or width == -1.0, f"width must be positive."
         
         assert measurement_system_flag == "IMPERIAL_UNITS" or \
             measurement_system_flag == "METRIC_UNITS", \
             f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", \
-            got "{measurement_system_flag}" of type {type(measurement_system_flag)}.' of type {type(measurement_system_flag)}'
+            got "{measurement_system_flag}" of type {type(measurement_system_flag)}. of type {type(measurement_system_flag)}'
         
-        self.doorType = doorType
+        self.typeNumber = typeNumber
         self.name = name
         self.height = height
         self.width = width
@@ -153,7 +248,7 @@ class DoorType:
 class WindowType:
 
     #Integer representing door type
-    windowType = np.empty
+    typeNumber = -1
     name = ""
     height = 0.0;
     width = 0.0;
@@ -164,7 +259,7 @@ class WindowType:
     measurement_system_flag = "IMPERIAL_UNITS"
     
     def __init__(self, \
-                windowType=-1, \
+                typeNumber=-1, \
                 name="Nameless", \
                 height=-1.0, \
                 width=-1.0, \
@@ -172,26 +267,26 @@ class WindowType:
                 measurement_system_flag="IMPERIAL_UNITS"):
             
         #Bound and type checking goes here
-        assert type(windowType) == type(1), f"windowType must be integer {type(windowType)}."
-        assert windowType >= -1 and windowType != 0, f"windowType must be positive."
+        assert type(typeNumber) == type(1), f"typeNumber must be integer {type(typeNumber)}."
+        assert typeNumber >= -1 and typeNumber != 0, f"typeNumber must be positive."
         
         assert type(name) == type(""), f"Name must be type string, got type {type(name)}." 
         
         assert type(height) == type(1.0), f"height must be a float, got type {type(height)}."
-        assert height > 0 or height == -1.0, f"height must be positive."
+        assert height > 0.0 or height == -1.0, f"height must be positive."
         
         assert type(width) == type(1.0), f"width must be a float, got type {type(width)}."
-        assert width > 0 or width == -1.0, f"width must be positive."
+        assert width > 0.0 or width == -1.0, f"width must be positive."
         
         assert type(stillHeight) == type(1.0), f"stillHeight must be a float, got type {type(stillHeight)}."
-        assert stillHeight > 0 or stillHeight == -1.0, f"stillHeight must be positive."
+        assert stillHeight > 0.0 or stillHeight == -1.0, f"stillHeight must be positive."
         
         assert measurement_system_flag == "IMPERIAL_UNITS" or \
             measurement_system_flag == "METRIC_UNITS", \
             f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", \
-            got "{measurement_system_flag}" of type {type(measurement_system_flag)}.' of type {type(measurement_system_flag)}'
+            got "{measurement_system_flag}" of type {type(measurement_system_flag)}. of type {type(measurement_system_flag)}'
             
-        self.windowType = windowType
+        self.typeNumber = typeNumber
         self.name = name
         self.height = height
         self.width = width
@@ -207,9 +302,12 @@ class Story:
     topElevation = -1
     
     #TODO type checking
+    #todo update this
     def __init__(self, bottomElevation=-1, topElevation=-1):
         self.bottomElevation = bottomElevation
         self.topElevation = topElevation
+        
+        #TODO bounds check
         
     #TODO append delete search return functions for all 3 lists
     
@@ -244,31 +342,40 @@ class Story:
         
 class Wall:
 
-    xZero = -1
-    yZero = -1
+    xZero = np.inf
+    yZero = np.inf
     
-    xOne = -1
-    yOne = -1
+    xOne = np.inf
+    yOne = np.inf
     
     #Reference to WallType object
     wallType = -1
     
     #Optional field, if left empty will default to the distance between elevation markers
-    height = -1
+    #TODO add support for this lmao
+    height = np.inf
     
     #Str array of info about wall
     #Includes tags
     information = []
     
     def __init__(self, \
-                cood0=(-1, -1), \
-                cood1=(-1, -1), \
-                wallType=-1, \
-                height=-1):
+                cood0=(np.inf, np.inf), \
+                cood1=(np.inf, np.inf), \
+                wallType=WallType(), \
+                height=np.inf):
                 
+        X0, Y0 = cood0
+        X1, Y1 = cood1
+                
+        assert type(X0) == type(0.0) and type(Y0) == type(0.0), f"cood0 must be a tuple of floats, got {type(X0)} and {type(Y0)}."
+        assert type(X1) == type(0.0) and type(Y1) == type(0.0), f"cood1 must be a tuple of floats, got {type(X1)} and {type(Y1)}."
+        assert type(wallType) == type(WallType()), f"wallType must be WallType object, got type {type(wallType)}."       
+        
         self.xZero, self.xZero = cood0
         self.xOne, self.yOne = cood1
         self.wallType = wallType
+        self.height = height
     
     #Returns tuple of coordinate of one end of the wall
     def getPosZero(self):
@@ -289,28 +396,32 @@ class Wall:
         
 class Door:
 
-    xPos = -1
-    yPos = -1
-    normalVector = -1.0
+    xPos = np.inf
+    yPos = np.inf
+    normalVector = np.inf
     
     #Reference to DoorType object
     doorType = -1
     
     #Reference to Wall object
     #Consider removing
-    embededWall = -1
+    embededWall = np.inf
     
     #Str array of info about wall
     #Includes tags
     information = []
     
     def __init__(self, \
-                pos=(-1, -1), \
-                normalVector=-1.0, \
-                doorType=-1, \
-                embededWall=-1):
+                pos=(np.inf, np.inf), \
+                normalVector=np.inf, \
+                doorType=DoorType(), \
+                embededWall=np.inf):
+
+        X, Y = pos
         
-        #TODO bounds and type checks
+        assert type(X) == type(0.0) and type(Y) == type(0.0), f"pos must be a tuple of floats, got {type(X)} and {type(Y)}."
+        assert type(normalVector) == type(0.0), f"normalVector must be type float, got type {type(normalVector)}."
+        assert type(doorType) == type(DoorType()), f"doorType must be DoorType object, got type {type(doorType)}."
         
         self.xPos, self.yPos = pos
         self.normalVector = normalVector
@@ -326,9 +437,13 @@ class Door:
 
 class Window:
 
-    xPos = -1
-    yPos = -1
-    normalVector = -1.0
+    xPos = np.inf
+    yPos = np.inf
+    
+    #refers to the angle normal vector, such that,
+    #0.0 represents pointing right, and the outside face of the door is pointing left
+    #90.0 represents pointing down, and the outside face of the door is pointing up
+    normalVector = np.inf
     
     #Reference to WindowType object
     windowType = -1
@@ -342,12 +457,16 @@ class Window:
     information = []
     
     def __init__(self, \
-                pos=(-1, -1), \
-                normalVector=-1.0, \
-                windowType=-1, \
+                pos=(np.inf, np.inf), \
+                normalVector=np.inf, \
+                windowType=WindowType(), \
                 embededWall=-1):
         
-        #TODO bounds and type checks
+        X, Y = pos
+        
+        assert type(X) == type(0.0) and type(Y) == type(0.0), f"pos must be a tuple of floats, got {type(X)} and {type(Y)}."
+        assert type(normalVector) == type(0.0), f"normalVector must be type float, got type {type(normalVector)}."
+        assert type(windowType) == type(WindowType()), f"windowType must be WindowType object, got type {type(windowType)}."
         
         self.xPos, self.yPos = pos
         self.normalVector = normalVector
@@ -361,37 +480,28 @@ class Window:
     def setPos(self, cood):
         self.xPos, self.yPos = cood
         
-        
-#assertion statements to make sure everything works properly
-#not comprehensive, please add to
-buildingSchedule = Schedule()
+buildingData = BuildingData()
+#horizontal
+buildingData.appendGridline((0.0,0.0), (2000.0,0.0))
+buildingData.appendGridline((0.0,1000.0), (2000.0,1000.0))
+#vertical
+buildingData.appendGridline((0.0,0.0), (0.0,1000.0))
+buildingData.appendGridline((2000.0,0.0), (2000.0,1000.0))
+assert len(buildingData.listOfGridlines) == 4
+assert buildingData.listOfGridlines[0].cood0 == (0.0,0.0)
+assert buildingData.listOfGridlines[1].cood0 == (0.0,1000.0)
+assert buildingData.listOfGridlines[1].cood1 == (2000.0,1000.0)
 
-timWallType = WallType(wallType=17, name="8 inches of tungsten", thickness=8.0)
-tomDoorType = DoorType(doorType=34, name="a single sheet of paper", height=60.0, width=40.0)
-dimaWindowType = WindowType(windowType=98, name="German Window", height=80.0, width=20.0, stillHeight=80.0)
+#negative example
+try:
+    buildingData.appendGridline((0,0), (2000,0))
+    print("You aren't supposed to see this.")
+except:
+    3
+    
+buildingData.appendElevation(0.0)
+buildingData.appendElevation(12.0)
 
-buildingSchedule.append(timWallType)
-buildingSchedule.append(tomDoorType)
-buildingSchedule.append(dimaWindowType)
-
-assert len(buildingSchedule.listOfDoorTypes) == 1
-assert len(buildingSchedule.listOfWallTypes) == 1
-assert len(buildingSchedule.listOfWindowTypes) == 1
-
-assert type(buildingSchedule.searchByType(17)) == type(WallType())
-assert type(buildingSchedule.searchByType(34)) == type(DoorType())
-assert type(buildingSchedule.searchByType(98)) == type(WindowType())
-
-firstFloor = Story(topElevation=-1, bottomElevation=-1)
-
-jacksonWall = Wall()
-johnsonDoor = Door()
-grantWindow = Window()
-
-firstFloor.append(jacksonWall)
-firstFloor.append(johnsonDoor)
-firstFloor.append(grantWindow)
-
-assert len(firstFloor.listOfDoors) == 1
-assert len(firstFloor.listOfWalls) == 1
-assert len(firstFloor.listOfWindows) == 1
+assert len(buildingData.listOfElevations) == 2
+assert buildingData.listOfElevations[0].height == 0.0
+assert buildingData.listOfElevations[1].height == 12.0
