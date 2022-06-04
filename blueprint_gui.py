@@ -64,33 +64,34 @@ def get_user_digit(message):
         sg.Popup('Invalid input')
         return None
 
-def get_pdf_as_image(new_size):
+def get_pdf_name():
+    filename = sg.popup_get_file('Will not see this message', no_window=True)
+    if filename is '':
+        return None
+    elif(filename.lower()[-4:] != ".pdf"):
+        sg.popup("The selected file is not a PDF file!")
+        return None
+    else:
+        return filename
+
+def get_pdf_as_image(new_size, filename, page_num):
     try:
-        filename = sg.popup_get_file('Will not see this message', no_window=True)
-        if filename is '':
-            return None
-        elif(filename.lower()[-4:] != ".pdf"):
-            sg.popup("The selected file is not a PDF file!")
-        else:
-            temp_image = page_num = None
-            page_num = get_user_digit('Enter Blueprint Page Number:')
-            if not page_num:
-                return None
-            images = convert_from_path(filename, size=new_size)
-            zip_name = "{}1.zip".format(filename[:-4])
-            with zipfile.ZipFile(zip_name, "w", compression=zipfile.ZIP_DEFLATED) as new_zip:
-                for i, page in enumerate(images):
-                    png_name = "{}1_{}.png".format(filename[:-4], i+1)
-                    png_folder = os.path.join(filename, '..', png_name)
-                    zip_folder = os.path.join(filename, '..', zip_name)
-                    if i+1 == page_num:
-                        page.save(png_name, "PNG")
-                        new_zip.write(png_name, arcname=png_name)
-                        temp_image = image_formating(png_folder, resize=(new_size, new_size))
-                        os.remove(png_folder)
-                        break
-            if temp_image is None:
-                sg.popup('Page Not Found!!')
+        temp_image = None
+        images = convert_from_path(filename, size=new_size)
+        zip_name = "{}1.zip".format(filename[:-4])
+        with zipfile.ZipFile(zip_name, "w", compression=zipfile.ZIP_DEFLATED) as new_zip:
+            for i, page in enumerate(images):
+                png_name = "{}1_{}.png".format(filename[:-4], i+1)
+                png_folder = os.path.join(filename, '..', png_name)
+                zip_folder = os.path.join(filename, '..', zip_name)
+                if i+1 == page_num:
+                    page.save(png_name, "PNG")
+                    new_zip.write(png_name, arcname=png_name)
+                    temp_image = image_formating(png_folder, resize=(new_size, new_size))
+                    os.remove(png_folder)
+                    break
+        if temp_image is None:
+            sg.popup('Page Not Found!!')
     except Exception as E:
         print('** Error {} **'.format(E))
         pass        # get file popup was cancelled
@@ -174,10 +175,15 @@ while True:
     if event == sg.WIN_CLOSED or event == 'Exit':
         break
     if event == 'Open     Ctrl-O':
-        temp_img = None
         new_size = 1000
-        # TODO set this up as a thread
-        temp_img = get_pdf_as_image(new_size)
+        pdf_file = get_pdf_name()
+        page_num = get_user_digit('Enter Blueprint Page Number:')
+        if pdf_file and page_num:
+            window.perform_long_operation(lambda :
+                              get_pdf_as_image(new_size, pdf_file, page_num),
+                              '-LOADED PDF-')
+    elif event == '-LOADED PDF-':
+        temp_img = values[event]
         if temp_img is not None:
             img = orig_img = temp_img
             graph1 = window["-GRAPH1-"]  # type: sg.Graph
