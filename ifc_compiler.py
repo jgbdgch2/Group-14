@@ -26,7 +26,7 @@ def getGUID():
         return "".join([b64(bs[0], 2)] + [b64((bs[i] << 16) + (bs[i + 1] << 8) + bs[i + 2]) for i in range(1, 16, 3)])
     return compress(uuid.uuid4().hex)
 
-# GUIDS for template use
+# generate GUIDS for ifcTemplate
 projectID = getGUID()
 siteID = getGUID()
 buildingID = getGUID()
@@ -34,6 +34,7 @@ rel1ID = getGUID()
 rel2ID = getGUID()
 
 # #99 references IFCUNITASSIGNMENT
+# #3 is used for vertical extrusions
 ifcTemplate = """ISO-10303-21;
 HEADER;
 FILE_DESCRIPTION((''),'2;1');
@@ -44,6 +45,7 @@ ENDSEC;
 DATA;
 #1= IFCCARTESIANPOINT((0.,0.,0.));
 #2= IFCAXIS2PLACEMENT3D(#1,$,$);
+#3= IFCDIRECTION((0., 0., 1.));
 
 #4= IFCPOSTALADDRESS($,$,$,$,(),$,'','','','');
 #5= IFCPROJECT('%(projectID)s', $, '', '', $, '', '',(#22), #99);
@@ -61,9 +63,14 @@ DATA;
 #22= IFCGEOMETRICREPRESENTATIONSUBCONTEXT('Body','Model',*,*,*,*,#21,$,.MODEL_VIEW.,$);
 """ % locals()
 
+ifcCloser = """ENDSEC;
+
+END-ISO-10303-21;
+"""
+
 # TODO set up IFC Units
 # IFC units shall be contained within positions #25-#99
-ifcImperail = """
+ifcImperial = """
 #99= IFCUNITASSIGNMENT(());
 """
 
@@ -90,6 +97,39 @@ def compileStory(Story, ifcPointer):
     f.write("#" + str(ifcPointer) + "= IFCRELAGGREGATES('" + getGUID() + "'),$,$,$,#7,#" + str(storyPointer) + "));\n")
     ifcPointer +=1
 
+    for Wall in Story.listOfWalls:
+        ifcPointer = compileWall(Wall, ifcPointer, storyPointer, storyLocalPlacement)
+
+    return ifcPointer
+
+def compileWall(Wall, ifcPointer, storyPointer, storyLocalPlacement):
+    #200= IFCCARTESIANPOINTLIST2D(((12.,1.),(0.,1.),(0.,-1.),(12.,-1.),(12.,1.)));
+    f.write("#" + str(ifcPointer) + "= IFCCARTESIANPOINTLIST2D((" + "));\n") # Create a function in Wall class to return the needed string for this
+    ifcPointer +=1
+    #201= IFCINDEXEDPOLYCURVE(#200, $, .F.);
+    f.write("#" + str(ifcPointer) + "= IFCINDEXEDPOLYCURVE(#" + str(ifcPointer-1) + ", $, .F.);\n")
+    ifcPointer +=1
+    #202= IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#201);
+    f.write("#" + str(ifcPointer) + "= IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#" + str(ifcPointer-1) + ");\n")
+    ifcPointer +=1
+    #203= IFCEXTRUDEDAREASOLID(#202, #2, #3, 8.);
+    PLACEHOLDERHEIGHT = 8
+    f.write("#" + str(ifcPointer) + "= IFCEXTRUDEDAREASOLID(#" + str(ifcPointer-1) + ", #2, #3, " + str(PLACEHOLDERHEIGHT) + ".);\n") # INCOMPLETE, NEEDS WALL HEIGHT
+    ifcPointer +=1
+    #204= IFCSHAPEREPRESENTATION(#22, 'Body', 'SweptSolid', (#203));
+    f.write("#" + str(ifcPointer) + "= IFCSHAPEREPRESENTATION(#22, 'Body', 'SweptSolid', (#" + str(ifcPointer-1) + "));\n")
+    ifcPointer +=1
+
+    #220= IFCPRODUCTDEFINITIONSHAPE($,$,(#204));
+    f.write("#" + str(ifcPointer) + "= IFCPRODUCTDEFINITIONSHAPE($,$,(#" + str(ifcPointer-1) + "));\n")
+    ifcPointer +=1
+    #221= IFCWALL('1btdOju4n3KfkQnsDbRkrg', $, $, $, $, #storyLocalPlacement, #220, '2712', .NOTDEFINED.);
+    f.write("#" + str(ifcPointer) + "= IFCWALL('" + getGUID() + "', $, $, $, $, #" + storyLocalPlacement + ", #" + str(ifcPointer-1) + ", '2712', .NOTDEFINED.);\n") # TODO figure out what 2712 means
+    ifcPointer +=1
+    #222= IFCRELCONTAINEDINSPATIALSTRUCTURE('1btdOju4n3KfkQns9bRk3f',$,$,$,(#221),#storyPointer);
+    f.write("#" + str(ifcPointer) +"= IFCRELCONTAINEDINSPATIALSTRUCTURE('" + getGUID() + "',$,$,$,(#" + str(ifcPointer-1) + "),#" + storyPointer + ");\n")
+    ifcPointer +=1
+
     return ifcPointer
 
 # Main Function Call
@@ -102,10 +142,10 @@ def compile(buildingData):
     f.write(ifcTemplate)
     # if(buildingData.measurement_system_flag == "IMPERIAL_UNITS"):
     # Placeholder used until measurement_system_flag functionality is clarified
-    if(True):
-        f.write("ifcImperial")
+    if(False):
+        f.write(ifcImperial)
     else:
-        f.write("ifcMetric")
+        f.write(ifcMetric)
 
     # Initialize pointer to track location in IFC file
     # Points to next available location in the IFC
@@ -115,15 +155,15 @@ def compile(buildingData):
     for Story in buildingData.listOfStories:
         ifcPointer = compileStory(Story, ifcPointer)
 
-
-
+    # Add closing lines to IFC file
+    f.write(ifcCloser)
     # Close IFC File, end of function
     f.close()
 
 # Test Code
 buildingData = building_data.BuildingData()
 
-# Need help with line 103, measurement_system_flag should be unique to the project probably?
+# Should measurement_system_flag be universal to the project?
 # How do obtain the value of measurement_system_flag from the buildingdata?
 # Clarify how elevations interract with storys.
 # My functionality will be to have the bottom elevation of each story be used as the actual story height and be the story with all the information
