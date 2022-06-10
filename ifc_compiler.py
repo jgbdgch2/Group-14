@@ -77,14 +77,14 @@ ifcMetric = """
 
 def compileStory(Story, ifcPointer):
     # Placeholder Variables
-    PLACEHOLDER_ELEVATION = 0
+    PLACEHOLDER_ELEVATION = 0.0
 
     storyPointer = ifcPointer;
     storyLocalPlacement = ifcPointer+3;
 
     f.write("#" + str(ifcPointer) + "= IFCBUILDINGSTOREY('" + getGUID() + "',$,'Level 1',$,'Level:Level 1, #" + str(storyLocalPlacement) + ",$,'Level 1',.ELEMENT.,0.);\n")
     ifcPointer +=1
-    f.write("#" + str(ifcPointer) + "= IFCCARTESIANPOINT((0.,0.,"+ str(PLACEHOLDER_ELEVATION) + ".));\n")
+    f.write("#" + str(ifcPointer) + "= IFCCARTESIANPOINT((0.,0.,"+ str(PLACEHOLDER_ELEVATION) + "));\n")
     ifcPointer +=1
     f.write("#" + str(ifcPointer) + "= IFCAXIS2PLACEMENT3D(#" + str(ifcPointer-1) + ",$,$);\n")
     ifcPointer +=1
@@ -98,11 +98,32 @@ def compileStory(Story, ifcPointer):
 
     return ifcPointer
 
+def getWallCoords(Wall):
+    xZero = Wall.xZero / 12
+    yZero = Wall.yZero / 12
+    xOne = Wall.xOne / 12
+    yOne = Wall.yOne / 12
+    thickness = Wall.getThickness() / 12
+    length = math.sqrt((xZero - xOne)**2 + (yZero - yOne)**2)
+    offsetRatio = thickness / (2 * length)
+
+    x1 = xZero + ((yZero - yOne) * offsetRatio)
+    x2 = xZero - ((yZero - yOne) * offsetRatio)
+    x3 = xOne  + ((yZero - yOne) * offsetRatio)
+    x4 = xOne  - ((yZero - yOne) * offsetRatio)
+    y1 = yZero + ((xZero - xOne) * offsetRatio)
+    y2 = yZero - ((xZero - xOne) * offsetRatio)
+    y3 = yOne  + ((xZero - xOne) * offsetRatio)
+    y4 = yOne  - ((xZero - xOne) * offsetRatio)
+
+    coords = "(%(x1)f,%(y1)f),(%(x2)f,%(y2)f),(%(x3)f,%(y3)f),(%(x4)f,%(y4)f)" % locals()
+
+    return coords
+
 # TODO: Assign Cross Section Properties to Walls
 def compileWall(Wall, ifcPointer, storyPointer, storyLocalPlacement):
     #200= IFCCARTESIANPOINTLIST2D(((12.,1.),(0.,1.),(0.,-1.),(12.,-1.),(12.,1.)));
-    PLACEHOLDER_WALL_COORDS = "(12.,1.),(0.,1.),(0.,-1.),(12.,-1.),(12.,1.)"
-    f.write("#" + str(ifcPointer) + "= IFCCARTESIANPOINTLIST2D((" + PLACEHOLDER_WALL_COORDS + "));\n") # Create a function in Wall class to return the needed string for this
+    f.write("#" + str(ifcPointer) + "= IFCCARTESIANPOINTLIST2D((" + getWallCoords(Wall) + "));\n")
     ifcPointer +=1
     #201= IFCINDEXEDPOLYCURVE(#200, $, .F.);
     f.write("#" + str(ifcPointer) + "= IFCINDEXEDPOLYCURVE(#" + str(ifcPointer-1) + ", $, .F.);\n")
@@ -111,8 +132,8 @@ def compileWall(Wall, ifcPointer, storyPointer, storyLocalPlacement):
     f.write("#" + str(ifcPointer) + "= IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#" + str(ifcPointer-1) + ");\n")
     ifcPointer +=1
     #203= IFCEXTRUDEDAREASOLID(#202, #2, #3, 8.);
-    PLACEHOLDERHEIGHT = 8
-    f.write("#" + str(ifcPointer) + "= IFCEXTRUDEDAREASOLID(#" + str(ifcPointer-1) + ", #2, #3, " + str(PLACEHOLDERHEIGHT) + ".);\n") # INCOMPLETE, NEEDS WALL HEIGHT
+    PLACEHOLDERHEIGHT = 8.0
+    f.write("#" + str(ifcPointer) + "= IFCEXTRUDEDAREASOLID(#" + str(ifcPointer-1) + ", #2, #3, " + str(PLACEHOLDERHEIGHT) + ");\n") # INCOMPLETE, NEEDS WALL HEIGHT
     ifcPointer +=1
     #204= IFCSHAPEREPRESENTATION(#22, 'Body', 'SweptSolid', (#203));
     f.write("#" + str(ifcPointer) + "= IFCSHAPEREPRESENTATION(#22, 'Body', 'SweptSolid', (#" + str(ifcPointer-1) + "));\n")
@@ -161,10 +182,4 @@ def compile(buildingData):
 # Test Code
 buildingData = building_data.BuildingData()
 
-# Should measurement_system_flag be universal to the project?
-# How do obtain the value of measurement_system_flag from the buildingdata?
-# Clarify how elevations interract with storys.
-# My functionality will be to have the bottom elevation of each story be used as the actual story height and be the story with all the information
-# The top elevation will be added in as an IFCBUILDINGSTOREY but it will not contain any actual building elements and exists to be displayed in revit
-# Decide on naming structure for the elevations
 compile(buildingData)
