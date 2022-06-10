@@ -1,10 +1,3 @@
-# TODO: Set Up IFCUNITASSIGNMENT
-# TODO: set up GUID generation
-# TODO: Walls
-# TODO: Assign Cross Section Properties to Walls
-# TODO: Doors
-# TODO: Windows
-
 import building_data
 import uuid
 import string
@@ -68,10 +61,13 @@ ifcCloser = """ENDSEC;
 END-ISO-10303-21;
 """
 
-# TODO set up IFC Units
 # IFC units shall be contained within positions #25-#99
 ifcImperial = """
-#99= IFCUNITASSIGNMENT(());
+#25=IFCSIUNIT(*,.LENGTHUNIT.,$,.METRE.);
+#26= IFCDIMENSIONALEXPONENTS(1,0,0,0,0,0,0);
+#27= IFCMEASUREWITHUNIT(IFCRATIOMEASURE(0.3048),#25);
+#28= IFCCONVERSIONBASEDUNIT(#26,.LENGTHUNIT.,'FOOT',#27);
+#99= IFCUNITASSIGNMENT((#28));
 """
 
 ifcMetric = """
@@ -102,9 +98,11 @@ def compileStory(Story, ifcPointer):
 
     return ifcPointer
 
+# TODO: Assign Cross Section Properties to Walls
 def compileWall(Wall, ifcPointer, storyPointer, storyLocalPlacement):
     #200= IFCCARTESIANPOINTLIST2D(((12.,1.),(0.,1.),(0.,-1.),(12.,-1.),(12.,1.)));
-    f.write("#" + str(ifcPointer) + "= IFCCARTESIANPOINTLIST2D((" + "));\n") # Create a function in Wall class to return the needed string for this
+    PLACEHOLDER_WALL_COORDS = "(12.,1.),(0.,1.),(0.,-1.),(12.,-1.),(12.,1.)"
+    f.write("#" + str(ifcPointer) + "= IFCCARTESIANPOINTLIST2D((" + PLACEHOLDER_WALL_COORDS + "));\n") # Create a function in Wall class to return the needed string for this
     ifcPointer +=1
     #201= IFCINDEXEDPOLYCURVE(#200, $, .F.);
     f.write("#" + str(ifcPointer) + "= IFCINDEXEDPOLYCURVE(#" + str(ifcPointer-1) + ", $, .F.);\n")
