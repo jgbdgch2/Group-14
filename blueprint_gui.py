@@ -165,11 +165,16 @@ graph1 = window["-GRAPH1-"]
 graph1.bind('<Button-3>', '+RIGHT1+')
 graph2 = window["-GRAPH2-"]
 graph2.bind('<Button-3>', '+RIGHT2+')
-start_point = end_point = filename = feature_name = None
-select_fig = img = orig_img = a_set = None
+start_point = end_point = filename = feature_name = select_fig = img = None
+orig_img = a_set = bound_top = bound_bottom = fig = a_point = None
 # --------------------------------- Event Loop ---------------------------------
 while True:
     event, values = window.read()
+    if bound_top: # always delete the bounds if they exist
+        # delete bounds
+        graph2.delete_figure(bound_top)
+        graph2.delete_figure(bound_bottom)
+        bound_top = bound_bottom = None
     #if event in (sg.WIN_CLOSED, 'Exit'): # Both of these exit lines do the same thing
         #break
     if event == sg.WIN_CLOSED or event == 'Exit':
@@ -206,11 +211,6 @@ while True:
         graph2.set_size(img.size)
         graph2.change_coordinates((0,0), (img.size[0], img.size[1]))
         graph2.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
-    elif event == "-Feature-" and feature_name is not None:
-        new_size = 100
-        img = image_formating(feature_name, resize=(new_size, new_size))
-        graph2 = window["-GRAPH2-"]  # type: sg.Graph
-        graph2.draw_image(data=convert_to_bytes(img), location=(300, img.size[1]))
     elif event == "-GRAPH1-":  # if there's a "Graph" event, then it's a mouse
         x, y = values["-GRAPH1-"]
         if not dragging1:
@@ -242,6 +242,7 @@ while True:
         if select_fig == drag_figures[0]: # The bottom figure will always be the initial blueprint
             select_fig = None
         if select_fig is not None:
+            graph2.BringFigureToFront(select_fig) # when dragging a feature bring it to front of all others not selected
             graph2.move_figure(select_fig, delta_x, delta_y)
             graph2.update()
     elif event.endswith('+UP'):  # The dragging has ended because mouse up
@@ -275,9 +276,15 @@ while True:
             elif set_distance:
                 if not a_set:
                     a_set = end_point1
+                    graph1.DrawCircle(a_set, 4, line_color='black', fill_color='white')
+                    a_point = graph1.get_figures_at_location(a_set)
+                    a_point = a_point[-1]
                     sg.Popup('Select point B')
                 else:
                     x_distance, y_distance = end_point1[0] - a_set[0], end_point1[1] - a_set[1]
+                    graph1.DrawCircle(end_point1, 4, line_color='black', fill_color='white')
+                    b_point = graph1.get_figures_at_location(end_point1)
+                    b_point = b_point[-1]
                     if x_distance < 0:
                         x_distance = x_distance*-1
                     if y_distance < 0:
@@ -294,7 +301,9 @@ while True:
                             y_pixel_ratio = user_distance / y_distance
                             sg.Popup('y-axis set')
                             print(y_pixel_ratio)
-                    a_set = None
+                    graph1.delete_figure(a_point)
+                    graph1.delete_figure(b_point)
+                    a_set = a_point = b_point = None
                     set_distance = False
             info = 'start X: {} start Y: {}\nend X: {}  end Y: {}'.format(start1_x, start1_y, x, y)
             # sg.popup('Dragging Done!\n{}'.format(info)) # This line can be used for trouble shooting mouse positions
@@ -303,6 +312,22 @@ while True:
             x, y = values["-GRAPH2-"]
             end_point2 = (x, y)
             start2_x, start2_y = start_point2
+            if not fig:
+                fig = graph2.get_figures_at_location((x,y))
+                select_fig = fig[-1]
+            if select_fig == fig[0]: # The bottom figure will always be the initial blueprint
+                select_fig = None
+            elif select_fig is None: # if the selected figure is already none then do nothing
+                pass
+            else:
+                # Draw the bounds around the image
+                bounds = graph2.get_bounding_box(select_fig)
+                graph2.DrawCircle(bounds[0], 7, line_color='black', fill_color='white')
+                bound_top = graph2.get_figures_at_location(bounds[0])
+                graph2.DrawCircle(bounds[1], 7, line_color='black', fill_color='white')
+                bound_bottom = graph2.get_figures_at_location(bounds[1])
+                bound_top = bound_top[-1]
+                bound_bottom = bound_bottom[-1]
             info = 'start X: {} start Y: {}\nend X: {}  end Y: {}'.format(start2_x, start2_y, x, y)
             # sg.popup('Dragging Done!\n{}'.format(info)) # This line can be used for trouble shooting mouse positions
             dragging2 = False
@@ -314,15 +339,24 @@ while True:
             select_fig = None
         else:
             bounds = graph2.get_bounding_box(select_fig)
+            graph2.DrawCircle(bounds[0], 7, line_color='black', fill_color='white')
+            bound_top = graph2.get_figures_at_location(bounds[0])
+            graph2.DrawCircle(bounds[1], 7, line_color='black', fill_color='white')
+            bound_bottom = graph2.get_figures_at_location(bounds[1])
+            bound_top = bound_top[-1]
+            bound_bottom = bound_bottom[-1]
     elif  event == 'Delete':
         if select_fig is not None:
             graph2.delete_figure(select_fig)
             select_fig = None
-    elif event == 'Insert' and feature_name is not None:
+    elif feature_name is not None and (event == 'Insert' or event == "-Feature-"):
         new_size = 100
-        img = image_formating(feature_name, resize=(new_size, new_size))
+        feature = image_formating(feature_name, resize=(new_size, new_size))
         graph2 = window["-GRAPH2-"]  # type: sg.Graph
-        graph2.draw_image(data=convert_to_bytes(img), location=(x, y))
+        if event == 'Insert':
+            graph2.draw_image(data=convert_to_bytes(feature), location=(x, y))
+        else:
+            graph2.draw_image(data=convert_to_bytes(feature), location=(300, feature.size[1]))
     elif  event == 'Rotate':
         new_size = 1000
         img = img.transpose(PIL.Image.ROTATE_90)
