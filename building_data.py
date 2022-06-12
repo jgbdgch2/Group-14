@@ -29,8 +29,8 @@ class BuildingData:
         buffer = Elevation(height, measurement_system_flag)
         self.listOfElevations.append(buffer)
         
-    def appendStory(self, elevation0, elevation1):
-        buffer = Story(elevation0, elevation1)
+    def appendStory(self, bottomElevation, topElevation):
+        buffer = Story(bottomElevation, topElevation)
         self.listOfStories.append(buffer)
         
 class Gridline:
@@ -252,7 +252,7 @@ class WindowType:
     name = ""
     height = 0.0;
     width = 0.0;
-    stillHeight = 0.0
+    sillHeight = 0.0
     
     #Str array of info about wall type
     information = []
@@ -263,7 +263,7 @@ class WindowType:
                 name="Nameless", \
                 height=-1.0, \
                 width=-1.0, \
-                stillHeight=-1.0, \
+                sillHeight=-1.0, \
                 measurement_system_flag="IMPERIAL_UNITS"):
             
         #Bound and type checking goes here
@@ -278,8 +278,8 @@ class WindowType:
         assert type(width) == type(1.0), f"width must be a float, got type {type(width)}."
         assert width > 0.0 or width == -1.0, f"width must be positive."
         
-        assert type(stillHeight) == type(1.0), f"stillHeight must be a float, got type {type(stillHeight)}."
-        assert stillHeight > 0.0 or stillHeight == -1.0, f"stillHeight must be positive."
+        assert type(sillHeight) == type(1.0), f"sillHeight must be a float, got type {type(sillHeight)}."
+        assert sillHeight > 0.0 or sillHeight == -1.0, f"sillHeight must be positive."
         
         assert measurement_system_flag == "IMPERIAL_UNITS" or \
             measurement_system_flag == "METRIC_UNITS", \
@@ -290,7 +290,7 @@ class WindowType:
         self.name = name
         self.height = height
         self.width = width
-        self.stillHeight = stillHeight
+        self.sillHeight = sillHeight
         self.measurement_system_flag = measurement_system_flag
         
 class Story:
@@ -307,7 +307,8 @@ class Story:
         self.bottomElevation = bottomElevation
         self.topElevation = topElevation
         
-        #TODO bounds check
+        assert type(bottomElevation) == type(Elevation()), f"bottomElevation must be elevation, got type {type(bottomElevation)}."
+        assert type(topElevation) == type(Elevation()), f"topElevation must be elevation, got type {type(topElevation)}."
         
     #TODO append delete search return functions for all 3 lists
     
@@ -396,8 +397,14 @@ class Wall:
         
 class Door:
 
+    #Position from the center of the door frame
     xPos = np.inf
     yPos = np.inf
+    
+    #refers to the angle normal vector, such that,
+    #0.0 represents pointing right, and the outside face of the door is pointing left
+    #90.0 represents pointing down, and the outside face of the door is pointing up
+    #doors "swing" out, always
     normalVector = np.inf
     
     #Reference to DoorType object
@@ -437,6 +444,7 @@ class Door:
 
 class Window:
 
+    #Position from the center of the window
     xPos = np.inf
     yPos = np.inf
     
@@ -499,9 +507,60 @@ try:
 except:
     3
     
-buildingData.appendElevation(0.0)
-buildingData.appendElevation(12.0)
+buildingData.appendElevation(0.0, measurement_system_flag="METRIC_UNITS")
+buildingData.appendElevation(400.0, measurement_system_flag="METRIC_UNITS")
 
 assert len(buildingData.listOfElevations) == 2
 assert buildingData.listOfElevations[0].height == 0.0
-assert buildingData.listOfElevations[1].height == 12.0
+assert buildingData.listOfElevations[1].height == 400.0
+
+buildingData.buildingSchedule.append(WallType(typeNumber=1, \
+                                            name="das conk creet baybee", \
+                                            thickness=50.0, \
+                                            measurement_system_flag="METRIC_UNITS"))
+buildingData.buildingSchedule.append(DoorType(typeNumber=2, \
+                                            name="the Pearly Gates", \
+                                            height=200.0, \
+                                            width=120.0, \
+                                            measurement_system_flag="METRIC_UNITS"))
+buildingData.buildingSchedule.append(WindowType(typeNumber=3, \
+                                            name="the Pearly Gates", \
+                                            height=100.0, \
+                                            width=100.0, \
+                                            sillHeight=40.0, \
+                                            measurement_system_flag="METRIC_UNITS"))
+                                            
+buildingData.appendStory(bottomElevation = buildingData.listOfElevations[0], \
+                        topElevation = buildingData.listOfElevations[1])
+                        
+#South wall
+buildingData.listOfStories[0].append(Wall(cood0=(0.0, 25.0), cood1=(1050.0, 25.0), \
+                                        wallType=buildingData.buildingSchedule.searchByType(1)))
+
+#East wall
+buildingData.listOfStories[0].append(Wall(cood0=(1025.0, 0.0), cood1=(1025.0, 550.0), \
+                                        wallType=buildingData.buildingSchedule.searchByType(1)))
+
+#North wall
+buildingData.listOfStories[0].append(Wall(cood0=(0.0, 525.0), cood1=(1050.0, 525.0), \
+                                        wallType=buildingData.buildingSchedule.searchByType(1)))
+
+#West wall
+buildingData.listOfStories[0].append(Wall(cood0=(25.0, 0.0), cood1=(25.0, 550.0), \
+                                        wallType=buildingData.buildingSchedule.searchByType(1)))
+                                        
+#Door on north wall
+buildingData.listOfStories[0].append(Door(pos=(645.0, 525.0), normalVector=90.0, \
+                                        doorType=buildingData.buildingSchedule.searchByType(2)))
+
+#Window on west wall
+buildingData.listOfStories[0].append(Window(pos=(25.0, 365.0), normalVector=0.0, \
+                                        windowType=buildingData.buildingSchedule.searchByType(3)))
+
+#Window on east wall
+#Set slightly off of wall, intentionally
+buildingData.listOfStories[0].append(Window(pos=(1045.0, 365.0), normalVector=180.0, \
+                                        windowType=buildingData.buildingSchedule.searchByType(3)))
+
+
+print("done!")
