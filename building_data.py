@@ -373,7 +373,7 @@ class Wall:
         assert type(X1) == type(0.0) and type(Y1) == type(0.0), f"cood1 must be a tuple of floats, got {type(X1)} and {type(Y1)}."
         assert type(wallType) == type(WallType()), f"wallType must be WallType object, got type {type(wallType)}."       
         
-        self.xZero, self.xZero = cood0
+        self.xZero, self.yZero = cood0
         self.xOne, self.yOne = cood1
         self.wallType = wallType
         self.height = height
@@ -387,7 +387,7 @@ class Wall:
         return (self.xOne, self.yOne)
 
     def getThickness(self):
-        return self.wallType.getThickness()
+        return self.wallType.thickness
         
     def setPosZero(self, cood):
         self.xZero, self.yZero = cood
