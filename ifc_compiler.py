@@ -1,6 +1,7 @@
 import uuid
 import string
 import math
+import building_data
 
 # TODO ensure output file goes to correct location
 filename = "default_filename.ifc"
@@ -115,7 +116,6 @@ def getWallCoords(Wall):
     y2 = yZero - ((xZero - xOne) * offsetRatio)
     y3 = yOne  + ((xZero - xOne) * offsetRatio)
     y4 = yOne  - ((xZero - xOne) * offsetRatio)
-
 
     coords = "(%(x1)f,%(y1)f),(%(x2)f,%(y2)f),(%(x4)f,%(y4)f),(%(x3)f,%(y3)f),(%(x1)f,%(y1)f)" % locals()
 
