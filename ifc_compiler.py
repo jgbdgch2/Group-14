@@ -1,6 +1,6 @@
-import building_data
 import uuid
 import string
+import math
 
 # TODO ensure output file goes to correct location
 filename = "default_filename.ifc"
@@ -75,14 +75,14 @@ ifcMetric = """
 #99= IFCUNITASSIGNMENT((#25));
 """
 
-def compileStory(Story, ifcPointer):
+def compileStory(f, Story, ifcPointer):
     # Placeholder Variables
     PLACEHOLDER_ELEVATION = 0.0
 
     storyPointer = ifcPointer;
     storyLocalPlacement = ifcPointer+3;
 
-    f.write("#" + str(ifcPointer) + "= IFCBUILDINGSTOREY('" + getGUID() + "',$,'Level 1',$,'Level:Level 1, #" + str(storyLocalPlacement) + ",$,'Level 1',.ELEMENT.,0.);\n")
+    f.write("#" + str(ifcPointer) + "= IFCBUILDINGSTOREY('" + getGUID() + "',$,'Level 1',$,'Level:Level 1',#" + str(storyLocalPlacement) + ",$,'Level 1',.ELEMENT.,0.);\n")
     ifcPointer +=1
     f.write("#" + str(ifcPointer) + "= IFCCARTESIANPOINT((0.,0.,"+ str(PLACEHOLDER_ELEVATION) + "));\n")
     ifcPointer +=1
@@ -90,11 +90,11 @@ def compileStory(Story, ifcPointer):
     ifcPointer +=1
     f.write("#" + str(ifcPointer) + "= IFCLOCALPLACEMENT(#11,#" + str(ifcPointer-1) + ");\n")
     ifcPointer +=1
-    f.write("#" + str(ifcPointer) + "= IFCRELAGGREGATES('" + getGUID() + "'),$,$,$,#7,#" + str(storyPointer) + "));\n")
+    f.write("#" + str(ifcPointer) + "= IFCRELAGGREGATES('" + getGUID() + "',$,$,$,#7,(#" + str(storyPointer) + "));\n")
     ifcPointer +=1
 
     for Wall in Story.listOfWalls:
-        ifcPointer = compileWall(Wall, ifcPointer, storyPointer, storyLocalPlacement)
+        ifcPointer = compileWall(f, Wall, ifcPointer, storyPointer, storyLocalPlacement)
 
     return ifcPointer
 
@@ -116,12 +116,13 @@ def getWallCoords(Wall):
     y3 = yOne  + ((xZero - xOne) * offsetRatio)
     y4 = yOne  - ((xZero - xOne) * offsetRatio)
 
-    coords = "(%(x1)f,%(y1)f),(%(x2)f,%(y2)f),(%(x3)f,%(y3)f),(%(x4)f,%(y4)f)" % locals()
+
+    coords = "(%(x1)f,%(y1)f),(%(x2)f,%(y2)f),(%(x4)f,%(y4)f),(%(x3)f,%(y3)f),(%(x1)f,%(y1)f)" % locals()
 
     return coords
 
 # TODO: Assign Cross Section Properties to Walls
-def compileWall(Wall, ifcPointer, storyPointer, storyLocalPlacement):
+def compileWall(f, Wall, ifcPointer, storyPointer, storyLocalPlacement):
     #200= IFCCARTESIANPOINTLIST2D(((12.,1.),(0.,1.),(0.,-1.),(12.,-1.),(12.,1.)));
     f.write("#" + str(ifcPointer) + "= IFCCARTESIANPOINTLIST2D((" + getWallCoords(Wall) + "));\n")
     ifcPointer +=1
@@ -143,10 +144,10 @@ def compileWall(Wall, ifcPointer, storyPointer, storyLocalPlacement):
     f.write("#" + str(ifcPointer) + "= IFCPRODUCTDEFINITIONSHAPE($,$,(#" + str(ifcPointer-1) + "));\n")
     ifcPointer +=1
     #221= IFCWALL('1btdOju4n3KfkQnsDbRkrg', $, $, $, $, #storyLocalPlacement, #220, '2712', .NOTDEFINED.);
-    f.write("#" + str(ifcPointer) + "= IFCWALL('" + getGUID() + "', $, $, $, $, #" + storyLocalPlacement + ", #" + str(ifcPointer-1) + ", '2712', .NOTDEFINED.);\n") # TODO figure out what 2712 means
+    f.write("#" + str(ifcPointer) + "= IFCWALL('" + getGUID() + "', $, $, $, $, #" + str(storyLocalPlacement) + ", #" + str(ifcPointer-1) + ", '2712', .NOTDEFINED.);\n") # TODO figure out what 2712 means
     ifcPointer +=1
     #222= IFCRELCONTAINEDINSPATIALSTRUCTURE('1btdOju4n3KfkQns9bRk3f',$,$,$,(#221),#storyPointer);
-    f.write("#" + str(ifcPointer) +"= IFCRELCONTAINEDINSPATIALSTRUCTURE('" + getGUID() + "',$,$,$,(#" + str(ifcPointer-1) + "),#" + storyPointer + ");\n")
+    f.write("#" + str(ifcPointer) +"= IFCRELCONTAINEDINSPATIALSTRUCTURE('" + getGUID() + "',$,$,$,(#" + str(ifcPointer-1) + "),#" + str(storyPointer) + ");\n")
     ifcPointer +=1
 
     return ifcPointer
@@ -161,7 +162,7 @@ def compile(buildingData):
     f.write(ifcTemplate)
     # if(buildingData.measurement_system_flag == "IMPERIAL_UNITS"):
     # Placeholder used until measurement_system_flag functionality is clarified
-    if(False):
+    if(True):
         f.write(ifcImperial)
     else:
         f.write(ifcMetric)
@@ -172,14 +173,9 @@ def compile(buildingData):
     ifcPointer = 100
 
     for Story in buildingData.listOfStories:
-        ifcPointer = compileStory(Story, ifcPointer)
+        ifcPointer = compileStory(f, Story, ifcPointer)
 
     # Add closing lines to IFC file
     f.write(ifcCloser)
     # Close IFC File, end of function
     f.close()
-
-# Test Code
-buildingData = building_data.BuildingData()
-
-compile(buildingData)
