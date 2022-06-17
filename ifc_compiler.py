@@ -1,10 +1,14 @@
 import uuid
 import string
 import math
-import building_data
 
 # TODO ensure output file goes to correct location
 filename = "default_filename.ifc"
+
+# Initialize pointer to track location in IFC file
+# Points to next available location in the IFC
+# 100 is the fist available location after the units are written to the file
+ifcPointer = 100
 
 # Returns a unique string 22 characters long to be used as an IFC compliant GUID
 # Created using code from IfcOpenShell
@@ -76,12 +80,15 @@ ifcMetric = """
 #99= IFCUNITASSIGNMENT((#25));
 """
 
-def compileStory(f, Story, ifcPointer):
+def compileStory(f, Story):
     # Placeholder Variables
     PLACEHOLDER_ELEVATION = 0.0
 
+    global ifcPointer
     storyPointer = ifcPointer;
     storyLocalPlacement = ifcPointer+3;
+    storyElements = ""
+    storyWalls = []
 
     f.write("#" + str(ifcPointer) + "= IFCBUILDINGSTOREY('" + getGUID() + "',$,'Level 1',$,'Level:Level 1',#" + str(storyLocalPlacement) + ",$,'Level 1',.ELEMENT.,0.);\n")
     ifcPointer +=1
@@ -95,16 +102,49 @@ def compileStory(f, Story, ifcPointer):
     ifcPointer +=1
 
     for Wall in Story.listOfWalls:
-        ifcPointer = compileWall(f, Wall, ifcPointer, storyPointer, storyLocalPlacement)
+        storyElements = storyElements + compileWall(f, Wall, storyLocalPlacement)
+        storyWalls.append(ifcPointer-1)
+    for Door in Story.listOfDoors:
+        storyElements = storyElements + compileDoor(f, Door, storyLocalPlacement, storyWalls)
 
-    return ifcPointer
+    storyElements = storyElements[:len(storyElements)-1] # Removes extra , from end of string
 
+    #222= IFCRELCONTAINEDINSPATIALSTRUCTURE('1btdOju4n3KfkQns9bRk3f',$,$,$,(#221),#storyPointer);
+    f.write("#" + str(ifcPointer) +"= IFCRELCONTAINEDINSPATIALSTRUCTURE('" + getGUID() + "',$,$,$,(" + storyElements + "),#" + str(storyPointer) + ");\n")
+    ifcPointer +=1
+
+def printRectangularShapeDef(f, coords, height):
+    global ifcPointer
+    #200= IFCCARTESIANPOINTLIST2D(((12.,1.),(0.,1.),(0.,-1.),(12.,-1.),(12.,1.)));
+    f.write("#" + str(ifcPointer) + "= IFCCARTESIANPOINTLIST2D((" + coords + "));\n")
+    ifcPointer +=1
+    #201= IFCINDEXEDPOLYCURVE(#200, $, .F.);
+    f.write("#" + str(ifcPointer) + "= IFCINDEXEDPOLYCURVE(#" + str(ifcPointer-1) + ", $, .F.);\n")
+    ifcPointer +=1
+    #202= IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#201);
+    f.write("#" + str(ifcPointer) + "= IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#" + str(ifcPointer-1) + ");\n")
+    ifcPointer +=1
+    #203= IFCEXTRUDEDAREASOLID(#202, #2, #3, 8.);
+    f.write("#" + str(ifcPointer) + "= IFCEXTRUDEDAREASOLID(#" + str(ifcPointer-1) + ", #2, #3, " + str(height) + ");\n")
+    ifcPointer +=1
+    #204= IFCSHAPEREPRESENTATION(#22, 'Body', 'SweptSolid', (#203));
+    f.write("#" + str(ifcPointer) + "= IFCSHAPEREPRESENTATION(#22, 'Body', 'SweptSolid', (#" + str(ifcPointer-1) + "));\n")
+    ifcPointer +=1
+    #220= IFCPRODUCTDEFINITIONSHAPE($,$,(#204));
+    f.write("#" + str(ifcPointer) + "= IFCPRODUCTDEFINITIONSHAPE($,$,(#" + str(ifcPointer-1) + "));\n")
+    ifcPointer +=1
+
+# TODO: make this work with metric units
 def getWallCoords(Wall):
-    xZero = Wall.xZero / 12
-    yZero = Wall.yZero / 12
-    xOne = Wall.xOne / 12
-    yOne = Wall.yOne / 12
-    thickness = Wall.getThickness() / 12
+    if(Wall.wallType.measurement_system_flag == "IMPERIAL_UNITS"):
+        unitModifier = 12.0
+    else:
+        unitModifier = 100.0
+    xZero = Wall.xZero / unitModifier
+    yZero = Wall.yZero / unitModifier
+    xOne = Wall.xOne / unitModifier
+    yOne = Wall.yOne / unitModifier
+    thickness = Wall.getThickness() / unitModifier
     length = math.sqrt((xZero - xOne)**2 + (yZero - yOne)**2)
     offsetRatio = thickness / (2 * length)
 
@@ -122,35 +162,87 @@ def getWallCoords(Wall):
     return coords
 
 # TODO: Assign Cross Section Properties to Walls
-def compileWall(f, Wall, ifcPointer, storyPointer, storyLocalPlacement):
-    #200= IFCCARTESIANPOINTLIST2D(((12.,1.),(0.,1.),(0.,-1.),(12.,-1.),(12.,1.)));
-    f.write("#" + str(ifcPointer) + "= IFCCARTESIANPOINTLIST2D((" + getWallCoords(Wall) + "));\n")
-    ifcPointer +=1
-    #201= IFCINDEXEDPOLYCURVE(#200, $, .F.);
-    f.write("#" + str(ifcPointer) + "= IFCINDEXEDPOLYCURVE(#" + str(ifcPointer-1) + ", $, .F.);\n")
-    ifcPointer +=1
-    #202= IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#201);
-    f.write("#" + str(ifcPointer) + "= IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#" + str(ifcPointer-1) + ");\n")
-    ifcPointer +=1
-    #203= IFCEXTRUDEDAREASOLID(#202, #2, #3, 8.);
-    PLACEHOLDERHEIGHT = 8.0
-    f.write("#" + str(ifcPointer) + "= IFCEXTRUDEDAREASOLID(#" + str(ifcPointer-1) + ", #2, #3, " + str(PLACEHOLDERHEIGHT) + ");\n") # INCOMPLETE, NEEDS WALL HEIGHT
-    ifcPointer +=1
-    #204= IFCSHAPEREPRESENTATION(#22, 'Body', 'SweptSolid', (#203));
-    f.write("#" + str(ifcPointer) + "= IFCSHAPEREPRESENTATION(#22, 'Body', 'SweptSolid', (#" + str(ifcPointer-1) + "));\n")
-    ifcPointer +=1
-
-    #220= IFCPRODUCTDEFINITIONSHAPE($,$,(#204));
-    f.write("#" + str(ifcPointer) + "= IFCPRODUCTDEFINITIONSHAPE($,$,(#" + str(ifcPointer-1) + "));\n")
-    ifcPointer +=1
+# TODO: Connect Walls to Eachother
+def compileWall(f, Wall, storyLocalPlacement):
+    global ifcPointer
+    printRectangularShapeDef(f, getWallCoords(Wall), 32.0)
     #221= IFCWALL('1btdOju4n3KfkQnsDbRkrg', $, $, $, $, #storyLocalPlacement, #220, '2712', .NOTDEFINED.);
-    f.write("#" + str(ifcPointer) + "= IFCWALL('" + getGUID() + "', $, $, $, $, #" + str(storyLocalPlacement) + ", #" + str(ifcPointer-1) + ", '2712', .NOTDEFINED.);\n") # TODO figure out what 2712 means
+    f.write("#" + str(ifcPointer) + "= IFCWALL('" + getGUID() + "', $, $, $, $, #" + str(storyLocalPlacement) + ", #" + str(ifcPointer-1) + ", $, .NOTDEFINED.);\n")
     ifcPointer +=1
-    #222= IFCRELCONTAINEDINSPATIALSTRUCTURE('1btdOju4n3KfkQns9bRk3f',$,$,$,(#221),#storyPointer);
-    f.write("#" + str(ifcPointer) +"= IFCRELCONTAINEDINSPATIALSTRUCTURE('" + getGUID() + "',$,$,$,(#" + str(ifcPointer-1) + "),#" + str(storyPointer) + ");\n")
-    ifcPointer +=1
+    return "#" + str(ifcPointer-1) + ","
 
-    return ifcPointer
+
+def getDoorOpeningCoords(Door):
+    if(Door.doorType.measurement_system_flag == "IMPERIAL_UNITS"):
+        unitModifier = 12.0
+    else:
+        unitModifier = 100.0
+    if(Door.doorType.measurement_system_flag == "IMPERIAL_UNITS"):
+        unitModifier = 12.0
+    else:
+        unitModifier = 100.0
+    xCenter = Door.xPos / unitModifier
+    yCenter = Door.yPos / unitModifier
+    thickness = 0.25 # TODO: sort out door and window thickness
+    width = Door.doorType.width / (2*unitModifier)
+    x1 = xCenter + math.sin(math.radians(Door.normalVector))*width + math.cos(math.radians(Door.normalVector))*thickness
+    x2 = xCenter + math.sin(math.radians(Door.normalVector))*width + math.cos(math.radians(Door.normalVector))*thickness
+    x3 = xCenter - math.sin(math.radians(Door.normalVector))*width - math.cos(math.radians(Door.normalVector))*thickness
+    x4 = xCenter - math.sin(math.radians(Door.normalVector))*width - math.cos(math.radians(Door.normalVector))*thickness
+    y1 = yCenter + math.sin(math.radians(Door.normalVector))*thickness + math.cos(math.radians(Door.normalVector))*width
+    y2 = yCenter - math.sin(math.radians(Door.normalVector))*thickness - math.cos(math.radians(Door.normalVector))*width
+    y3 = yCenter + math.sin(math.radians(Door.normalVector))*thickness + math.cos(math.radians(Door.normalVector))*width
+    y4 = yCenter - math.sin(math.radians(Door.normalVector))*thickness - math.cos(math.radians(Door.normalVector))*width
+
+    coords = "(%(x1)f,%(y1)f),(%(x2)f,%(y2)f),(%(x4)f,%(y4)f),(%(x3)f,%(y3)f),(%(x1)f,%(y1)f)" % locals()
+
+    return coords
+
+def getDoorCoords(Door):
+    if(Door.doorType.measurement_system_flag == "IMPERIAL_UNITS"):
+        unitModifier = 12.0
+    else:
+        unitModifier = 100.0
+    if(Door.doorType.measurement_system_flag == "IMPERIAL_UNITS"):
+        unitModifier = 12.0
+    else:
+        unitModifier = 100.0
+    xCenter = Door.xPos / unitModifier
+    yCenter = Door.yPos / unitModifier
+    thickness = 0.1 # TODO: sort out door and window thickness
+    width = Door.doorType.width / (2*unitModifier)
+    x1 = xCenter + math.sin(math.radians(Door.normalVector))*width + math.cos(math.radians(Door.normalVector))*thickness
+    x2 = xCenter + math.sin(math.radians(Door.normalVector))*width + math.cos(math.radians(Door.normalVector))*thickness
+    x3 = xCenter - math.sin(math.radians(Door.normalVector))*width - math.cos(math.radians(Door.normalVector))*thickness
+    x4 = xCenter - math.sin(math.radians(Door.normalVector))*width - math.cos(math.radians(Door.normalVector))*thickness
+    y1 = yCenter + math.sin(math.radians(Door.normalVector))*thickness + math.cos(math.radians(Door.normalVector))*width
+    y2 = yCenter - math.sin(math.radians(Door.normalVector))*thickness - math.cos(math.radians(Door.normalVector))*width
+    y3 = yCenter + math.sin(math.radians(Door.normalVector))*thickness + math.cos(math.radians(Door.normalVector))*width
+    y4 = yCenter - math.sin(math.radians(Door.normalVector))*thickness - math.cos(math.radians(Door.normalVector))*width
+
+    coords = "(%(x1)f,%(y1)f),(%(x2)f,%(y2)f),(%(x4)f,%(y4)f),(%(x3)f,%(y3)f),(%(x1)f,%(y1)f)" % locals()
+
+    return coords
+
+def compileDoor(f, Door, storyLocalPlacement, storyWalls):
+    global ifcPointer
+    printRectangularShapeDef(f, getDoorOpeningCoords(Door), float(Door.doorType.height))
+    #615= IFCOPENINGELEMENT('0DzNJ20FL0ZQlbjUb8770P',#42,'Single-Flush:36" x 84":285019:1',$,$,#613,#607,'285019',.OPENING.);
+    f.write("#" + str(ifcPointer) + "= IFCOPENINGELEMENT('" + getGUID() + "', $, $, $, $, #" + str(storyLocalPlacement) + ", #" + str(ifcPointer-1) + ", $, .OPENING.);\n")
+    openingPointer = ifcPointer
+    ifcPointer +=1
+    printRectangularShapeDef(f, getDoorCoords(Door), float(Door.doorType.height))
+    #474= IFCDOOR('0DzNJ20FL0ZQlbjVf8770P',#42,'Single-Flush:36" x 84":285019',$,'Single-Flush:36" x 84"',#636,#467,'285019',7.,3.,.DOOR.,.NOTDEFINED.,$);
+    f.write("#" + str(ifcPointer) + "= IFCDOOR('" + getGUID() + "', $, $, $, $, #" + str(storyLocalPlacement) + ", #" + str(ifcPointer-1) + ", $, 7.,3.,.DOOR.,.NOTDEFINED.,$);\n")
+    doorPointer = ifcPointer
+    ifcPointer +=1
+    #632= IFCRELFILLSELEMENT('396YOskxfCdhVuHlpB3O$6',#42,$,$,#615,#474);
+    f.write("#" + str(ifcPointer) + "= IFCRELVOIDSELEMENT('" + getGUID() + "', $, $, $,#" + str(storyWalls[2]) + ", #" + str(openingPointer) + ");\n") # TODO: need to know which wall to attatch to
+    ifcPointer +=1
+    f.write("#" + str(ifcPointer) + "= IFCRELFILLSELEMENT('" + getGUID() + "', $, $, $,#" + str(openingPointer) + ", #" + str(doorPointer) + ");\n")
+    ifcPointer +=1
+    return "#" + str(ifcPointer-1) + ","
+
 
 # Main Function Call
 # buildingData is the data to be placed in the IFC
@@ -167,13 +259,8 @@ def compile(buildingData):
     else:
         f.write(ifcMetric)
 
-    # Initialize pointer to track location in IFC file
-    # Points to next available location in the IFC
-    # 100 is the fist available location after the units are written to the file
-    ifcPointer = 100
-
     for Story in buildingData.listOfStories:
-        ifcPointer = compileStory(f, Story, ifcPointer)
+        compileStory(f, Story)
 
     # Add closing lines to IFC file
     f.write(ifcCloser)

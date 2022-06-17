@@ -1,4 +1,5 @@
 import numpy as np
+import ifc_compiler
 #TODO add more comments
 #TODO lookup hit should return "None" instead of -1
 
@@ -562,6 +563,6 @@ buildingData.listOfStories[0].append(Window(pos=(25.0, 365.0), normalVector=0.0,
 buildingData.listOfStories[0].append(Window(pos=(1045.0, 365.0), normalVector=180.0, \
                                         windowType=buildingData.buildingSchedule.searchByType(3)))
 
-del buildingData
+ifc_compiler.compile(buildingData)
 
 print("done!")
