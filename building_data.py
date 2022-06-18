@@ -13,6 +13,8 @@ class BuildingData:
     buildingSchedule = 0
     listOfStories = []
 
+    isImperial = True
+
     def __init__(self):
         self.buildingSchedule = Schedule()
         self.listOfStories = []
@@ -21,13 +23,19 @@ class BuildingData:
 
     #TODO delete, search functions
 
-    def appendGridline(self, cood0, cood1, measurement_system_flag="IMPERIAL_UNITS"):
-        buffer = Gridline(cood0, cood1, measurement_system_flag)
+#    def appendGridline(self, cood0, cood1, measurement_system_flag="IMPERIAL_UNITS"):
+#        buffer = Gridline(cood0, cood1, measurement_system_flag)
+#        self.listOfGridlines.append(buffer)
+    def appendGridline(self, cood0, cood1):
+        buffer = Gridline(cood0, cood1)
         self.listOfGridlines.append(buffer)
 
     #TODO check if elevation already exists, if it does ignore it
-    def appendElevation(self, height, measurement_system_flag="IMPERIAL_UNITS"):
-        buffer = Elevation(height, measurement_system_flag)
+#    def appendElevation(self, height, measurement_system_flag="IMPERIAL_UNITS"):
+#        buffer = Elevation(height, measurement_system_flag)
+#        self.listOfElevations.append(buffer)
+    def appendElevation(self, height):
+        buffer = Elevation(height)
         self.listOfElevations.append(buffer)
 
     def appendStory(self, bottomElevation, topElevation):
@@ -41,42 +49,43 @@ class Gridline:
     cood0 = (np.inf, np.inf)
     cood1 = (np.inf, np.inf)
 
-    measurement_system_flag = "IMPERIAL_UNITS"
+    #measurement_system_flag = "IMPERIAL_UNITS"
 
-    def __init__(self, cood0=(np.inf, np.inf), cood1=(np.inf, np.inf), measurement_system_flag="IMPERIAL_UNITS"):
+    #def __init__(self, cood0=(np.inf, np.inf), cood1=(np.inf, np.inf), measurement_system_flag="IMPERIAL_UNITS"):
+    def __init__(self, cood0=(np.inf, np.inf), cood1=(np.inf, np.inf)):
 
         X0, Y0 = cood0
         X1, Y1 = cood1
         #type and bounds checking
         assert type(X0) == type(0.0) and type(Y0) == type(0.0), f"cood0 must be a tuple of floats, got {type(X0)} and {type(Y0)}."
         assert type(X1) == type(0.0) and type(Y1) == type(0.0), f"cood1 must be a tuple of floats, got {type(X1)} and {type(Y1)}."
-        assert measurement_system_flag == "IMPERIAL_UNITS" or \
-            measurement_system_flag == "METRIC_UNITS", \
-            f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", \
-            got "{measurement_system_flag}" of type {type(measurement_system_flag)}. of type {type(measurement_system_flag)}'
+        #assert measurement_system_flag == "IMPERIAL_UNITS" or \
+        #    measurement_system_flag == "METRIC_UNITS", \
+        #    f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", \
+        #    got "{measurement_system_flag}" of type {type(measurement_system_flag)}. of type {type(measurement_system_flag)}'
 
         self.cood0 = cood0
         self.cood1 = cood1
-        self.measurement_system_flag = measurement_system_flag
+        #self.measurement_system_flag = measurement_system_flag
 
 class Elevation:
 
     name=""
     height = 0.0
-    measurement_system_flag = "IMPERIAL_UNITS"
+    #measurement_system_flag = "IMPERIAL_UNITS"
 
     def __init__(self, \
-                height=-0.0, \
-                measurement_system_flag="IMPERIAL_UNITS"):
+                height=-0.0):
+                #measurement_system_flag="IMPERIAL_UNITS"):
         #type checking
         assert type(height) == type(0.0), f"Height must be float, got type {type(height)}"
-        assert measurement_system_flag == "IMPERIAL_UNITS" or \
-            measurement_system_flag == "METRIC_UNITS", \
-            f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", \
-            got "{measurement_system_flag}" of type {type(measurement_system_flag)}. of type {type(measurement_system_flag)}'
+        #assert measurement_system_flag == "IMPERIAL_UNITS" or \
+        #    measurement_system_flag == "METRIC_UNITS", \
+        #    f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", \
+        #    got "{measurement_system_flag}" of type {type(measurement_system_flag)}. of type {type(measurement_system_flag)}'
 
         self.height = height
-        self.measurement_system_flag = measurement_system_flag
+        #self.measurement_system_flag = measurement_system_flag
 
 class Schedule:
     #3 seperate lists representing each schedule
@@ -176,14 +185,14 @@ class WallType:
 
     #Str array of info about wall type
     information = []
-    measurement_system_flag = "IMPERIAL_UNITS"
+    #measurement_system_flag = "IMPERIAL_UNITS"
 
     #Takes in int, string, float, string
     def __init__(self, \
                 typeNumber=-1, \
                 name="Nameless", \
-                thickness=-1.0, \
-                measurement_system_flag="IMPERIAL_UNITS"):
+                thickness=-1.0):
+                #measurement_system_flag="IMPERIAL_UNITS"):
 
         #Bound and type checking goes here
         assert type(typeNumber) == type(1), f"Wall type must be integer, got {type(typeNumber)}."
@@ -194,15 +203,15 @@ class WallType:
         assert type(thickness) == type(1.0), f"thickness must be a float, got type {type(thickness)}."
         assert thickness > 0.0 or thickness == -1.0, f"Thickness must be positive."
 
-        assert measurement_system_flag == "IMPERIAL_UNITS" or \
-            measurement_system_flag == "METRIC_UNITS", \
-            f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", \
-            got "{measurement_system_flag}" of type {type(measurement_system_flag)}.'
+        #assert measurement_system_flag == "IMPERIAL_UNITS" or \
+        #    measurement_system_flag == "METRIC_UNITS", \
+        #    f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", \
+        #    got "{measurement_system_flag}" of type {type(measurement_system_flag)}.'
 
         self.typeNumber = typeNumber
         self.name = name
         self.thickness = thickness
-        self.measurement_system_flag = measurement_system_flag
+        #self.measurement_system_flag = measurement_system_flag
 
 class DoorType:
 
@@ -214,14 +223,14 @@ class DoorType:
 
     #Str array of info about wall type
     information = []
-    measurement_system_flag = "IMPERIAL_UNITS"
+    #measurement_system_flag = "IMPERIAL_UNITS"
 
     def __init__(self, \
                 typeNumber=-1, \
                 name="Nameless", \
                 height=-1.0, \
-                width=-1.0, \
-                measurement_system_flag="IMPERIAL_UNITS"):
+                width=-1.0):
+                #measurement_system_flag="IMPERIAL_UNITS"):
 
         #Bound and type checking goes here
         assert type(typeNumber) == type(1), f"typeNumber must be integer {type(typeNumber)}."
@@ -235,16 +244,16 @@ class DoorType:
         assert type(width) == type(1.0), f"width must be a float, got type {type(width)}."
         assert width > 0.0 or width == -1.0, f"width must be positive."
 
-        assert measurement_system_flag == "IMPERIAL_UNITS" or \
-            measurement_system_flag == "METRIC_UNITS", \
-            f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", \
-            got "{measurement_system_flag}" of type {type(measurement_system_flag)}. of type {type(measurement_system_flag)}'
+        #assert measurement_system_flag == "IMPERIAL_UNITS" or \
+        #    measurement_system_flag == "METRIC_UNITS", \
+        #    f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", \
+        #    got "{measurement_system_flag}" of type {type(measurement_system_flag)}. of type {type(measurement_system_flag)}'
 
         self.typeNumber = typeNumber
         self.name = name
         self.height = height
         self.width = width
-        self.measurement_system_flag = measurement_system_flag
+        #self.measurement_system_flag = measurement_system_flag
 
 class WindowType:
 
@@ -257,15 +266,15 @@ class WindowType:
 
     #Str array of info about wall type
     information = []
-    measurement_system_flag = "IMPERIAL_UNITS"
+    #measurement_system_flag = "IMPERIAL_UNITS"
 
     def __init__(self, \
                 typeNumber=-1, \
                 name="Nameless", \
                 height=-1.0, \
                 width=-1.0, \
-                sillHeight=-1.0, \
-                measurement_system_flag="IMPERIAL_UNITS"):
+                sillHeight=-1.0):
+                #measurement_system_flag="IMPERIAL_UNITS"):
 
         #Bound and type checking goes here
         assert type(typeNumber) == type(1), f"typeNumber must be integer {type(typeNumber)}."
@@ -282,22 +291,20 @@ class WindowType:
         assert type(sillHeight) == type(1.0), f"sillHeight must be a float, got type {type(sillHeight)}."
         assert sillHeight > 0.0 or sillHeight == -1.0, f"sillHeight must be positive."
 
-        assert measurement_system_flag == "IMPERIAL_UNITS" or \
-            measurement_system_flag == "METRIC_UNITS", \
-            f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", \
-            got "{measurement_system_flag}" of type {type(measurement_system_flag)}. of type {type(measurement_system_flag)}'
+        #assert measurement_system_flag == "IMPERIAL_UNITS" or \
+        #    measurement_system_flag == "METRIC_UNITS", \
+        #    f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", \
+        #    got "{measurement_system_flag}" of type {type(measurement_system_flag)}. of type {type(measurement_system_flag)}'
 
         self.typeNumber = typeNumber
         self.name = name
         self.height = height
         self.width = width
         self.sillHeight = sillHeight
-        self.measurement_system_flag = measurement_system_flag
+        #self.measurement_system_flag = measurement_system_flag
 
 class Story:
     listOfWalls = []
-    listOfDoors = []
-    listOfWindows = []
 
     bottomElevation = -1
     topElevation = -1
@@ -319,14 +326,6 @@ class Story:
             self.listOfWalls.append(element)
             return 0;
 
-        if type(element) == type(Door()):
-            self.listOfDoors.append(element)
-            return 0;
-
-        if type(element) == type(Window()):
-            self.listOfWindows.append(element)
-            return 0;
-
         raise Exception("Incompatiable object passed to append to schedule")
 
     #Meaningless functions until I implement elevations
@@ -343,12 +342,30 @@ class Story:
         this.topElevation = topElevation
 
 class Wall:
+    listOfDoors = []
+    listOfWindows = []
 
-    xZero = np.inf
-    yZero = np.inf
+    def append(self, element):
+        if type(element) == type(Door()):
+            self.listOfDoors.append(element)
+            return 0;
+        if type(element) == type(Window()):
+            self.listOfWindows.append(element)
+            return 0;
+        raise Exception("Incompatiable object passed to append to schedule")
 
-    xOne = np.inf
-    yOne = np.inf
+
+    #Position from the center of the wall
+    xPos = np.inf
+    yPos = np.inf
+
+    #Overall length of the wall
+    length = np.inf
+
+    #refers to the angle normal vector, such that,
+    #0.0 represents vertical wall
+    #90.0 represents horizontal wall
+    normalVector = np.inf
 
     #Reference to WallType object
     wallType = -1
@@ -362,79 +379,22 @@ class Wall:
     information = []
 
     def __init__(self, \
-                cood0=(np.inf, np.inf), \
-                cood1=(np.inf, np.inf), \
-                wallType=WallType(), \
-                height=np.inf):
-
-        X0, Y0 = cood0
-        X1, Y1 = cood1
-
-        assert type(X0) == type(0.0) and type(Y0) == type(0.0), f"cood0 must be a tuple of floats, got {type(X0)} and {type(Y0)}."
-        assert type(X1) == type(0.0) and type(Y1) == type(0.0), f"cood1 must be a tuple of floats, got {type(X1)} and {type(Y1)}."
-        assert type(wallType) == type(WallType()), f"wallType must be WallType object, got type {type(wallType)}."
-
-        self.xZero, self.yZero = cood0
-        self.xOne, self.yOne = cood1
-        self.wallType = wallType
-        self.height = height
-
-    #Returns tuple of coordinate of one end of the wall
-    def getPosZero(self):
-        return (self.xZero, self.yZero)
-
-    #Returns tuple of coordinate of the other end of the wall
-    def getPosOne(self):
-        return (self.xOne, self.yOne)
-
-    def getThickness(self):
-        return self.wallType.thickness
-
-    def setPosZero(self, cood):
-        self.xZero, self.yZero = cood
-
-    def setPosOne(self, cood):
-        self.xOne, self.yOne = cood
-
-class Door:
-
-    #Position from the center of the door frame
-    xPos = np.inf
-    yPos = np.inf
-
-    #refers to the angle normal vector, such that,
-    #0.0 represents pointing right, and the outside face of the door is pointing left
-    #90.0 represents pointing down, and the outside face of the door is pointing up
-    #doors "swing" out, always
-    normalVector = np.inf
-
-    #Reference to DoorType object
-    doorType = -1
-
-    #Reference to Wall object
-    #Consider removing
-    embededWall = np.inf
-
-    #Str array of info about wall
-    #Includes tags
-    information = []
-
-    def __init__(self, \
                 pos=(np.inf, np.inf), \
+                length=np.inf, \
                 normalVector=np.inf, \
-                doorType=DoorType(), \
-                embededWall=np.inf):
+                wallType=WallType(),:
 
         X, Y = pos
 
         assert type(X) == type(0.0) and type(Y) == type(0.0), f"pos must be a tuple of floats, got {type(X)} and {type(Y)}."
+        assert type(legnth) = type(0.0), f"length must be a type float, got type {type(length)}."
         assert type(normalVector) == type(0.0), f"normalVector must be type float, got type {type(normalVector)}."
-        assert type(doorType) == type(DoorType()), f"doorType must be DoorType object, got type {type(doorType)}."
+        assert type(wallType) == type(wallType()), f"wallType must be WallType object, got type {type(wallType)}."
 
         self.xPos, self.yPos = pos
+        self.length = length
         self.normalVector = normalVector
-        self.doorType = doorType
-        self.embededWall = embededWall
+        self.wallType = wallType
 
     #Returns tuple of coordiantes of the door
     def getPos(self):
@@ -443,51 +403,70 @@ class Door:
     def setPos(self, cood):
         self.xPos, self.yPos = cood
 
-class Window:
+    def getThickness(self):
+        return self.wallType.thickness
 
-    #Position from the center of the window
-    xPos = np.inf
-    yPos = np.inf
+class Door:
 
-    #refers to the angle normal vector, such that,
-    #0.0 represents pointing right, and the outside face of the window is pointing left
-    #90.0 represents pointing down, and the outside face of the window is pointing up
-    normalVector = np.inf
+    #Position from centerpoint of the wall, can be positive or negative
+    position = np.inf
 
-    #Reference to WindowType object
-    windowType = -1
+    #Where is the hinge on the door
+    hingePos = np.inf
 
-    #Reference to Wall object
-    #Consider removing
-    embededWall = -1
+    #Reference to DoorType object
+    doorType = -1
+
 
     #Str array of info about wall
     #Includes tags
     information = []
 
     def __init__(self, \
-                pos=(np.inf, np.inf), \
-                normalVector=np.inf, \
-                windowType=WindowType(), \
-                embededWall=-1):
+                position=np.inf, \
+                hingePos=np.inf, \
+                doorType=DoorType(),:
 
-        X, Y = pos
+        assert type(position) == type(0.0), f"position must be type float, got type {type(position)}."
+        assert type(hingePos) == type(0), f"hingePost must be a type int, got type {type(hingePos)}."
+        assert type(doorType) == type(DoorType()), f"doorType must be DoorType object, got type {type(doorType)}."
 
-        assert type(X) == type(0.0) and type(Y) == type(0.0), f"pos must be a tuple of floats, got {type(X)} and {type(Y)}."
-        assert type(normalVector) == type(0.0), f"normalVector must be type float, got type {type(normalVector)}."
-        assert type(windowType) == type(WindowType()), f"windowType must be WindowType object, got type {type(windowType)}."
+        self.position = position
+        self.hingePos = hingePos
+        self.doorType = doorType
 
-        self.xPos, self.yPos = pos
-        self.normalVector = normalVector
-        self.windowType = windowType
-        self.embededWall = embededWall
+class Window:
 
-    #Returns tuple of coordinate of the window
-    def getPos(self):
-        return (self.xPos, self.yPos)
+    #Position from centerpoint of the wall, can be positive or negative
+    position = np.inf
+    sillHeight = np.inf
 
-    def setPos(self, cood):
-        self.xPos, self.yPos = cood
+    #Which direction is the window facing
+    #May end up not being needed
+    directionFacing = np.inf
+
+    #Reference to WindowType object
+    windowType = -1
+
+    #Str array of info about wall
+    #Includes tags
+    information = []
+
+    def __init__(self, \
+                position=np.inf, \
+                sillHeight=np.inf, \
+                directionFacing=np.inf, \
+                windowType=WindowType(),:
+
+        assert type(position) == type(0.0), f"position must be type float, got type {type(position)}."
+        assert type(sillHeight) == type(0.0), f"sillHeight must be type float, got type {type(sillHeight)}."
+        assert type(directionFacing) == type(0), f"hingePost must be a type int, got type {type(hingePos)}."
+        assert type(doorType) == type(DoorType()), f"doorType must be DoorType object, got type {type(doorType)}."
+
+        self.position = position
+        self.sillHeight = sillHeight
+        self.hingePos = hingePos
+        self.doorType = doorType
 
 buildingData = BuildingData()
 #horizontal
@@ -508,8 +487,10 @@ try:
 except:
     3
 
-buildingData.appendElevation(0.0, measurement_system_flag="METRIC_UNITS")
-buildingData.appendElevation(400.0, measurement_system_flag="METRIC_UNITS")
+#buildingData.appendElevation(0.0, measurement_system_flag="METRIC_UNITS")
+buildingData.appendElevation(0.0)
+#buildingData.appendElevation(400.0, measurement_system_flag="METRIC_UNITS")
+buildingData.appendElevation(400.0)
 
 assert len(buildingData.listOfElevations) == 2
 assert buildingData.listOfElevations[0].height == 0.0
@@ -517,45 +498,45 @@ assert buildingData.listOfElevations[1].height == 400.0
 
 buildingData.buildingSchedule.append(WallType(typeNumber=1, \
                                             name="das conk creet baybee", \
-                                            thickness=50.0, \
-                                            measurement_system_flag="METRIC_UNITS"))
+                                            thickness=50.0)
+                                            #measurement_system_flag="METRIC_UNITS"))
 buildingData.buildingSchedule.append(DoorType(typeNumber=2, \
                                             name="the Pearly Gates", \
                                             height=200.0, \
-                                            width=120.0, \
-                                            measurement_system_flag="METRIC_UNITS"))
+                                            width=120.0)
+                                            #measurement_system_flag="METRIC_UNITS"))
 buildingData.buildingSchedule.append(WindowType(typeNumber=3, \
                                             name="the Pearly Gates", \
                                             height=100.0, \
                                             width=100.0, \
-                                            sillHeight=40.0, \
-                                            measurement_system_flag="METRIC_UNITS"))
+                                            sillHeight=40.0)
+                                            #measurement_system_flag="METRIC_UNITS"))
 
 buildingData.appendStory(bottomElevation = buildingData.listOfElevations[0], \
                         topElevation = buildingData.listOfElevations[1])
 
 #South wall
-buildingData.listOfStories[0].append(Wall(cood0=(0.0, 25.0), cood1=(1050.0, 25.0), \
+buildingData.listOfStories[0].append(Wall(pos=(500.0, 25.0), length=1000.0, normalVector=90.0,\
                                         wallType=buildingData.buildingSchedule.searchByType(1)))
 
 #East wall
-buildingData.listOfStories[0].append(Wall(cood0=(1025.0, 0.0), cood1=(1025.0, 550.0), \
+buildingData.listOfStories[0].append(Wall(pos=(25.0, 500.0), length=1000.0, normalVector=0.0,\
                                         wallType=buildingData.buildingSchedule.searchByType(1)))
 
 #North wall
-buildingData.listOfStories[0].append(Wall(cood0=(0.0, 525.0), cood1=(1050.0, 525.0), \
+buildingData.listOfStories[0].append(Wall(pos=(975.0, 500.0), length=1000.0, normalVector=0.0,\
                                         wallType=buildingData.buildingSchedule.searchByType(1)))
 
 #West wall
-buildingData.listOfStories[0].append(Wall(cood0=(25.0, 0.0), cood1=(25.0, 550.0), \
+buildingData.listOfStories[0].append(Wall(pos=(500.0, 975.0), length=1000.0, normalVector=90.0, \
                                         wallType=buildingData.buildingSchedule.searchByType(1)))
 
 #Door on north wall
-buildingData.listOfStories[0].append(Door(pos=(645.0, 525.0), normalVector=90.0, \
+buildingData.listOfStories[0].append(Door(position=400.0, hingePos=0, \
                                         doorType=buildingData.buildingSchedule.searchByType(2)))
 
 #Window on west wall
-buildingData.listOfStories[0].append(Window(pos=(25.0, 365.0), normalVector=0.0, \
+buildingData.listOfStories[0].append(Window(position=, normalVector=0.0, \
                                         windowType=buildingData.buildingSchedule.searchByType(3)))
 
 #Window on east wall
