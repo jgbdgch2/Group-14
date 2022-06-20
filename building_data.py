@@ -355,7 +355,7 @@ class Wall:
         raise Exception("Incompatiable object passed to append to schedule")
 
 
-    #Position from the center of the wall
+    #Position of the center of the wall
     xPos = np.inf
     yPos = np.inf
 
@@ -363,8 +363,9 @@ class Wall:
     length = np.inf
 
     #refers to the angle normal vector, such that,
-    #0.0 represents vertical wall
-    #90.0 represents horizontal wall
+    #0.0 represents horizontal wall
+    #90.0 represents vertical wall
+    #Angles rotate counterclockwise as per the unit circle
     normalVector = np.inf
 
     #Reference to WallType object
@@ -411,6 +412,7 @@ class Door:
     #Position from centerpoint of the wall, can be positive or negative
     position = np.inf
 
+    #hinges rotate counterclockwise
     #Where is the hinge on the door
     hingePos = np.inf
 
@@ -516,33 +518,24 @@ buildingData.appendStory(bottomElevation = buildingData.listOfElevations[0], \
                         topElevation = buildingData.listOfElevations[1])
 
 #South wall
-buildingData.listOfStories[0].append(Wall(pos=(500.0, 25.0), length=1000.0, normalVector=90.0,\
+buildingData.listOfStories[0].append(Wall(pos=(500.0, 25.0), length=1000.0, normalVector=0.0,\
                                         wallType=buildingData.buildingSchedule.searchByType(1)))
 
 #East wall
-buildingData.listOfStories[0].append(Wall(pos=(25.0, 500.0), length=1000.0, normalVector=0.0,\
+buildingData.listOfStories[0].append(Wall(pos=(25.0, 500.0), length=1000.0, normalVector=90.0,\
                                         wallType=buildingData.buildingSchedule.searchByType(1)))
 
 #North wall
-buildingData.listOfStories[0].append(Wall(pos=(975.0, 500.0), length=1000.0, normalVector=0.0,\
+buildingData.listOfStories[0].append(Wall(pos=(975.0, 500.0), length=1000.0, normalVector=90.0,\
                                         wallType=buildingData.buildingSchedule.searchByType(1)))
 
 #West wall
-buildingData.listOfStories[0].append(Wall(pos=(500.0, 975.0), length=1000.0, normalVector=90.0, \
+buildingData.listOfStories[0].append(Wall(pos=(500.0, 975.0), length=1000.0, normalVector=0.0, \
                                         wallType=buildingData.buildingSchedule.searchByType(1)))
 
 #Door on north wall
 buildingData.listOfStories[0].append(Door(position=400.0, hingePos=0, \
                                         doorType=buildingData.buildingSchedule.searchByType(2)))
-
-#Window on west wall
-buildingData.listOfStories[0].append(Window(position=, normalVector=0.0, \
-                                        windowType=buildingData.buildingSchedule.searchByType(3)))
-
-#Window on east wall
-#Set slightly off of wall, intentionally
-buildingData.listOfStories[0].append(Window(pos=(1045.0, 365.0), normalVector=180.0, \
-                                        windowType=buildingData.buildingSchedule.searchByType(3)))
 
 ifc_compiler.compile(buildingData)
 
