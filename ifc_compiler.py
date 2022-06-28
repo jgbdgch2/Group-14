@@ -80,43 +80,94 @@ ifcMetric = """
 #99= IFCUNITASSIGNMENT((#25));
 """
 
-def compileStory(f, Story):
-    # Placeholder Variables
-    PLACEHOLDER_ELEVATION = 0.0
+def getWindowCoords(Window):
+    global unitModifier
+    x = Window.windowType.width / (unitModifier*2)
+    y = Window.windowType.height / unitModifier
+    sill = Window.windowType.sillHeight / unitModifier
+    return "(({:.6f},-{:.6f}),({:.6f},{:.6f}),({:.6f},{:.6f}),({:.6f},-{:.6f}),({:.6f},-{:.6f}))".format(sill,x,sill,x,y,x,y,x,sill,x)
 
-    global ifcPointer
-    storyPointer = ifcPointer;
-    storyLocalPlacement = ifcPointer+3;
-    storyElements = ""
-    storyWalls = []
+def getDoorCoords(Door):
+    global unitModifier
+    x = Door.doorType.width / (unitModifier*2)
+    y = Door.doorType.height / unitModifier
+    return "((0.0,-{:.6f}),(0.0,{:.6f}),({:.6f},{:.6f}),({:.6f},-{:.6f}),(0.0,-{:.6f}))".format(x,x,y,x,y,x,x)
 
-    f.write("#" + str(ifcPointer) + "= IFCBUILDINGSTOREY('" + getGUID() + "',$,'Level 1',$,'Level:Level 1',#" + str(storyLocalPlacement) + ",$,'Level 1',.ELEMENT.,0.);\n")
-    ifcPointer +=1
-    f.write("#" + str(ifcPointer) + "= IFCCARTESIANPOINT((0.,0.,"+ str(PLACEHOLDER_ELEVATION) + "));\n")
-    ifcPointer +=1
-    f.write("#" + str(ifcPointer) + "= IFCAXIS2PLACEMENT3D(#" + str(ifcPointer-1) + ",$,$);\n")
-    ifcPointer +=1
-    f.write("#" + str(ifcPointer) + "= IFCLOCALPLACEMENT(#11,#" + str(ifcPointer-1) + ");\n")
-    ifcPointer +=1
-    f.write("#" + str(ifcPointer) + "= IFCRELAGGREGATES('" + getGUID() + "',$,$,$,#7,(#" + str(storyPointer) + "));\n")
-    ifcPointer +=1
+def locationOnWall(distance, Wall, hingeToggle, elementThickness):
+    global unitModifier
+    distance = distance / unitModifier
+    thickness = Wall.getThickness() / (unitModifier*2)
+    if(hingeToggle):
+        thickness = thickness * -1 + elementThickness
+    angle = math.radians(Wall.angle)
+    xPos = Wall.xPos / unitModifier
+    yPos = Wall.yPos / unitModifier
 
-    for Wall in Story.listOfWalls:
-        storyElements = storyElements + compileWall(f, Wall, storyLocalPlacement)
-        storyWalls.append(ifcPointer-1)
-    for Door in Story.listOfDoors:
-        storyElements = storyElements + compileDoor(f, Door, storyLocalPlacement, storyWalls)
+    x = xPos + distance * math.cos(angle) + thickness * math.sin(angle)
+    y = yPos + distance * math.sin(angle) - thickness * math.cos(angle)
 
-    storyElements = storyElements[:len(storyElements)-1] # Removes extra , from end of string
+    return "({:.6f}, {:.6f}, 0.0)".format(x, y)
 
-    #222= IFCRELCONTAINEDINSPATIALSTRUCTURE('1btdOju4n3KfkQns9bRk3f',$,$,$,(#221),#storyPointer);
-    f.write("#" + str(ifcPointer) +"= IFCRELCONTAINEDINSPATIALSTRUCTURE('" + getGUID() + "',$,$,$,(" + storyElements + "),#" + str(storyPointer) + ");\n")
-    ifcPointer +=1
 
-def printRectangularShapeDef(f, coords, height):
+def getExtrudeDir(wallAngle):
+    x = math.cos(math.radians(wallAngle + 90.0))
+    y = math.sin(math.radians(wallAngle + 90.0))
+    return "({:.6f}, {:.6f}, 0.0)".format(x, y)
+
+def printPerpendicularShapeDef(f, coords, thickness, extrudeDir):
     global ifcPointer
     #200= IFCCARTESIANPOINTLIST2D(((12.,1.),(0.,1.),(0.,-1.),(12.,-1.),(12.,1.)));
-    f.write("#" + str(ifcPointer) + "= IFCCARTESIANPOINTLIST2D((" + coords + "));\n")
+    f.write("#" + str(ifcPointer) + "= IFCCARTESIANPOINTLIST2D(" + coords + ");\n")
+    ifcPointer +=1
+    #201= IFCINDEXEDPOLYCURVE(#200, $, .F.);
+    f.write("#" + str(ifcPointer) + "= IFCINDEXEDPOLYCURVE(#" + str(ifcPointer-1) + ", $, .F.);\n")
+    ifcPointer +=1
+    #202= IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#201);
+    f.write("#" + str(ifcPointer) + "= IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#" + str(ifcPointer-1) + ");\n")
+    ifcPointer +=1
+    #18= IFCDIRECTION((0.,-1.,0.));
+    f.write("#" + str(ifcPointer) + "= IFCDIRECTION(" + extrudeDir + ");\n")
+    ifcPointer +=1
+    #603= IFCAXIS2PLACEMENT3D(#6,#18,#20);
+    f.write("#" + str(ifcPointer) + "= IFCAXIS2PLACEMENT3D(#1,#" + str(ifcPointer-1) + ",#3);\n")
+    ifcPointer +=1
+    #604= IFCEXTRUDEDAREASOLID(#602,#603,#20,0.666666666666667);
+    f.write("#" + str(ifcPointer) + "= IFCEXTRUDEDAREASOLID(#" + str(ifcPointer-3) + ", #" + str(ifcPointer-1) + ", #3, " + str(thickness) + ");\n")
+    ifcPointer +=1
+    #605= IFCSHAPEREPRESENTATION(#127,'Body','SweptSolid',(#604));
+    f.write("#" + str(ifcPointer) + "= IFCSHAPEREPRESENTATION(#22, 'Body', 'SweptSolid', (#" + str(ifcPointer-1) + "));\n")
+    ifcPointer +=1
+    #607= IFCPRODUCTDEFINITIONSHAPE($,$,(#605));
+    f.write("#" + str(ifcPointer) + "= IFCPRODUCTDEFINITIONSHAPE($,$,(#" + str(ifcPointer-1) + "));\n")
+    ifcPointer +=1
+
+def getWallCoords(Wall):
+    global unitModifier
+    thickness = Wall.getThickness() / (unitModifier*2)
+    length = Wall.length / (unitModifier*2)
+    angle = math.radians(Wall.angle)
+    xPos = Wall.xPos / unitModifier
+    yPos = Wall.yPos / unitModifier
+
+    x1 = xPos + length * math.cos(angle) + thickness * math.sin(angle)
+    y1 = yPos + length * math.sin(angle) - thickness * math.cos(angle)
+    x2 = xPos + length * math.cos(angle) - thickness * math.sin(angle)
+    y2 = yPos + length * math.sin(angle) + thickness * math.cos(angle)
+    x3 = xPos - length * math.cos(angle) - thickness * math.sin(angle)
+    y3 = yPos - length * math.sin(angle) + thickness * math.cos(angle)
+    x4 = xPos - length * math.cos(angle) + thickness * math.sin(angle)
+    y4 = yPos - length * math.sin(angle) - thickness * math.cos(angle)
+
+    #((12.,1.),(0.,1.),(0.,-1.),(12.,-1.),(12.,1.))
+
+    coords = "(({:.6f}, {:.6f}), ({:.6f}, {:.6f}), ({:.6f}, {:.6f}), ({:.6f}, {:.6f}), ({:.6f}, {:.6f}))".format(x1, y1, x2, y2, x3, y3, x4, y4, x1, y1)
+
+    return coords
+
+def printVerticalShapeDef(f, coords, height):
+    global ifcPointer
+    #200= IFCCARTESIANPOINTLIST2D(((12.,1.),(0.,1.),(0.,-1.),(12.,-1.),(12.,1.)));
+    f.write("#" + str(ifcPointer) + "= IFCCARTESIANPOINTLIST2D(" + coords + ");\n")
     ifcPointer +=1
     #201= IFCINDEXEDPOLYCURVE(#200, $, .F.);
     f.write("#" + str(ifcPointer) + "= IFCINDEXEDPOLYCURVE(#" + str(ifcPointer-1) + ", $, .F.);\n")
@@ -133,131 +184,164 @@ def printRectangularShapeDef(f, coords, height):
     #220= IFCPRODUCTDEFINITIONSHAPE($,$,(#204));
     f.write("#" + str(ifcPointer) + "= IFCPRODUCTDEFINITIONSHAPE($,$,(#" + str(ifcPointer-1) + "));\n")
     ifcPointer +=1
+    return (ifcPointer-1)
 
-# TODO: make this work with metric units
-def getWallCoords(Wall):
-    if(Wall.wallType.measurement_system_flag == "IMPERIAL_UNITS"):
-        unitModifier = 12.0
-    else:
-        unitModifier = 100.0
-    xZero = Wall.xZero / unitModifier
-    yZero = Wall.yZero / unitModifier
-    xOne = Wall.xOne / unitModifier
-    yOne = Wall.yOne / unitModifier
-    thickness = Wall.getThickness() / unitModifier
-    length = math.sqrt((xZero - xOne)**2 + (yZero - yOne)**2)
-    offsetRatio = thickness / (2 * length)
+def compileWindow(f, Window, Wall, ifcWallPointer, storyLocalPlacement):
+    global ifcPointer
+    global unitModifier
+    printPerpendicularShapeDef(f, getWindowCoords(Window), Wall.getThickness()/unitModifier, getExtrudeDir(Wall.angle))
+    shapeDef = ifcPointer-1
+    #610= IFCCARTESIANPOINT((7.5,0.333333333333313,0.));
+    f.write("#" + str(ifcPointer) + "= IFCCARTESIANPOINT(" + locationOnWall(Window.position, Wall, False, 0.0) +");\n")
+    ifcPointer +=1
+    #612= IFCAXIS2PLACEMENT3D(#610,$,$);
+    f.write("#" + str(ifcPointer) + "= IFCAXIS2PLACEMENT3D(#" + str(ifcPointer-1) + ",$,$);\n")
+    ifcPointer +=1
+    #613= IFCLOCALPLACEMENT(#201,#612);
+    f.write("#" + str(ifcPointer) + "= IFCLOCALPLACEMENT(#" + str(storyLocalPlacement) + ",#" + str(ifcPointer-1) + ");\n")
+    ifcPointer +=1
+    #615= IFCOPENINGELEMENT('0DzNJ20FL0ZQlbjUb8770P',#42,'Single-Flush:36" x 84":285019:1',$,$,#613,#607,'285019',.OPENING.);
+    f.write("#" + str(ifcPointer) + "= IFCOPENINGELEMENT('" + getGUID() + "', $, $, $, $,#" + str(ifcPointer-1) +",#" + str(shapeDef) + ",$,.OPENING.);\n")
+    ifcOpeningPointer = ifcPointer
+    ifcPointer +=1
 
-    x1 = xZero + ((yZero - yOne) * offsetRatio)
-    x2 = xZero - ((yZero - yOne) * offsetRatio)
-    x3 = xOne  + ((yZero - yOne) * offsetRatio)
-    x4 = xOne  - ((yZero - yOne) * offsetRatio)
-    y1 = yZero + ((xZero - xOne) * offsetRatio)
-    y2 = yZero - ((xZero - xOne) * offsetRatio)
-    y3 = yOne  + ((xZero - xOne) * offsetRatio)
-    y4 = yOne  - ((xZero - xOne) * offsetRatio)
+    defaultWindowThickness = 0.125 #translates to 1.5 inches
+    faceToggle = False # used to make door's 3d model appear on the correct side of the opening
+    if(Window.directionFacing == 1): # change this if statement once hingepos system is finalized
+        faceToggle = True
+    printPerpendicularShapeDef(f, getWindowCoords(Window), defaultWindowThickness, getExtrudeDir(Wall.angle))
+    shapeDef = ifcPointer-1
+    #610= IFCCARTESIANPOINT((7.5,0.333333333333313,0.));
+    f.write("#" + str(ifcPointer) + "= IFCCARTESIANPOINT(" + locationOnWall(Window.position, Wall, faceToggle, defaultWindowThickness) +");\n")
+    ifcPointer +=1
+    #612= IFCAXIS2PLACEMENT3D(#610,$,$);
+    f.write("#" + str(ifcPointer) + "= IFCAXIS2PLACEMENT3D(#" + str(ifcPointer-1) + ",$,$);\n")
+    ifcPointer +=1
+    #613= IFCLOCALPLACEMENT(#201,#612);
+    f.write("#" + str(ifcPointer) + "= IFCLOCALPLACEMENT(#" + str(storyLocalPlacement) + ",#" + str(ifcPointer-1) + ");\n")
+    ifcPointer +=1
+    #1927= IFCWINDOW('1egRXnmeDArvJcnh5AE0Rg',$,$,$,$,#26299,#1920,'288433',3.83333333333332,2.5,.WINDOW.,.NOTDEFINED.,$);
+    f.write("#" + str(ifcPointer) + "= IFCWINDOW('" + getGUID() + "',$,$,$,$,#" + str(ifcPointer-1) + ",#" + str(shapeDef) + ",$,"\
+        + str(Window.windowType.height/unitModifier) + "," + str(Window.windowType.width/unitModifier) + ",.WINDOW.,.NOTDEFINED.,$);\n")
+    ifcWindowPointer = ifcPointer
+    ifcPointer +=1
+    #620= IFCRELVOIDSELEMENT('0DzNJ20FL0ZQlbjUv8770P',#42,$,$,#238,#615);
+    f.write("#" + str(ifcPointer) + "= IFCRELVOIDSELEMENT('" + getGUID() + "',$,$,$,#" + str(ifcWallPointer) + ",#" + str(ifcOpeningPointer) + ");\n")
+    ifcPointer +=1
+    #632= IFCRELFILLSELEMENT('396YOskxfCdhVuHlpB3O$6',#42,$,$,#615,#474);
+    f.write("#" + str(ifcPointer) + "= IFCRELFILLSELEMENT('" + getGUID() + "',$,$,$,#" + str(ifcOpeningPointer) + ",#" + str(ifcWindowPointer) + ");\n")
+    ifcPointer +=1
+    returnString = "#" + str(ifcWindowPointer) + ","
+    return returnString
 
-    coords = "(%(x1)f,%(y1)f),(%(x2)f,%(y2)f),(%(x4)f,%(y4)f),(%(x3)f,%(y3)f),(%(x1)f,%(y1)f)" % locals()
+def compileDoor(f, Door, Wall, ifcWallPointer, storyLocalPlacement):
+    global ifcPointer
+    global unitModifier
+    printPerpendicularShapeDef(f, getDoorCoords(Door), Wall.getThickness()/unitModifier, getExtrudeDir(Wall.angle))
+    shapeDef = ifcPointer-1
+    #610= IFCCARTESIANPOINT((7.5,0.333333333333313,0.));
+    f.write("#" + str(ifcPointer) + "= IFCCARTESIANPOINT(" + locationOnWall(Door.position, Wall, False, 0.0) +");\n")
+    ifcPointer +=1
+    #612= IFCAXIS2PLACEMENT3D(#610,$,$);
+    f.write("#" + str(ifcPointer) + "= IFCAXIS2PLACEMENT3D(#" + str(ifcPointer-1) + ",$,$);\n")
+    ifcPointer +=1
+    #613= IFCLOCALPLACEMENT(#201,#612);
+    f.write("#" + str(ifcPointer) + "= IFCLOCALPLACEMENT(#" + str(storyLocalPlacement) + ",#" + str(ifcPointer-1) + ");\n")
+    ifcPointer +=1
+    #615= IFCOPENINGELEMENT('0DzNJ20FL0ZQlbjUb8770P',#42,'Single-Flush:36" x 84":285019:1',$,$,#613,#607,'285019',.OPENING.);
+    f.write("#" + str(ifcPointer) + "= IFCOPENINGELEMENT('" + getGUID() + "', $, $, $, $,#" + str(ifcPointer-1) +",#" + str(shapeDef) + ",$,.OPENING.);\n")
+    ifcOpeningPointer = ifcPointer
+    ifcPointer +=1
 
-    return coords
+    defaultDoorThickness = 0.125 #translates to 1.5 inches
+    hingeToggle = False # used to make door's 3d model appear on the correct side of the opening
+    if(Door.hingePos == 1): # change this if statement once hingepos system is finalized
+        hingeToggle = True
+    printPerpendicularShapeDef(f, getDoorCoords(Door), defaultDoorThickness, getExtrudeDir(Wall.angle))
+    shapeDef = ifcPointer-1
+    #610= IFCCARTESIANPOINT((7.5,0.333333333333313,0.));
+    f.write("#" + str(ifcPointer) + "= IFCCARTESIANPOINT(" + locationOnWall(Door.position, Wall, hingeToggle, defaultDoorThickness) +");\n")
+    ifcPointer +=1
+    #612= IFCAXIS2PLACEMENT3D(#610,$,$);
+    f.write("#" + str(ifcPointer) + "= IFCAXIS2PLACEMENT3D(#" + str(ifcPointer-1) + ",$,$);\n")
+    ifcPointer +=1
+    #613= IFCLOCALPLACEMENT(#201,#612);
+    f.write("#" + str(ifcPointer) + "= IFCLOCALPLACEMENT(#" + str(storyLocalPlacement) + ",#" + str(ifcPointer-1) + ");\n")
+    ifcPointer +=1
+    #474= IFCDOOR('0DzNJ20FL0ZQlbjVf8770P',#42,'Single-Flush:36" x 84":285019',$,'Single-Flush:36" x 84"',#636,#467,'285019',7.,3.,.DOOR.,.NOTDEFINED.,$);
+    f.write("#" + str(ifcPointer) + "= IFCDOOR('" + getGUID() + "',$,$,$,$,#" + str(ifcPointer-1) + ",#" + str(shapeDef) + ",$,"\
+        + str(Door.doorType.height/unitModifier) + "," + str(Door.doorType.width/unitModifier) + ",.DOOR.,.NOTDEFINED.,$);\n")
+    ifcDoorPointer = ifcPointer
+    ifcPointer +=1
+    #620= IFCRELVOIDSELEMENT('0DzNJ20FL0ZQlbjUv8770P',#42,$,$,#238,#615);
+    f.write("#" + str(ifcPointer) + "= IFCRELVOIDSELEMENT('" + getGUID() + "',$,$,$,#" + str(ifcWallPointer) + ",#" + str(ifcOpeningPointer) + ");\n")
+    ifcPointer +=1
+    #632= IFCRELFILLSELEMENT('396YOskxfCdhVuHlpB3O$6',#42,$,$,#615,#474);
+    f.write("#" + str(ifcPointer) + "= IFCRELFILLSELEMENT('" + getGUID() + "',$,$,$,#" + str(ifcOpeningPointer) + ",#" + str(ifcDoorPointer) + ");\n")
+    ifcPointer +=1
+    returnString = "#" + str(ifcDoorPointer) + ","
+    return returnString
 
 # TODO: Assign Cross Section Properties to Walls
 # TODO: Connect Walls to Eachother
 def compileWall(f, Wall, storyLocalPlacement):
     global ifcPointer
-    printRectangularShapeDef(f, getWallCoords(Wall), 32.0)
+    printVerticalShapeDef(f, getWallCoords(Wall), 8.0)
     #221= IFCWALL('1btdOju4n3KfkQnsDbRkrg', $, $, $, $, #storyLocalPlacement, #220, '2712', .NOTDEFINED.);
     f.write("#" + str(ifcPointer) + "= IFCWALL('" + getGUID() + "', $, $, $, $, #" + str(storyLocalPlacement) + ", #" + str(ifcPointer-1) + ", $, .NOTDEFINED.);\n")
+    ifcWallPointer = ifcPointer
     ifcPointer +=1
-    return "#" + str(ifcPointer-1) + ","
+    returnString = "#" + str(ifcWallPointer) + ","
+    for Door in Wall.listOfDoors:
+        returnString = returnString + compileDoor(f, Door, Wall, ifcWallPointer, storyLocalPlacement)
+    for Window in Wall.listOfWindows:
+        returnString = returnString + compileWindow(f, Window, Wall, ifcWallPointer, storyLocalPlacement)
+    return returnString
 
+def compileStory(f, Story):
+    # Placeholder Variables
+    PLACEHOLDER_ELEVATION = 0.0
 
-def getDoorOpeningCoords(Door):
-    if(Door.doorType.measurement_system_flag == "IMPERIAL_UNITS"):
-        unitModifier = 12.0
-    else:
-        unitModifier = 100.0
-    if(Door.doorType.measurement_system_flag == "IMPERIAL_UNITS"):
-        unitModifier = 12.0
-    else:
-        unitModifier = 100.0
-    xCenter = Door.xPos / unitModifier
-    yCenter = Door.yPos / unitModifier
-    thickness = 0.25 # TODO: sort out door and window thickness
-    width = Door.doorType.width / (2*unitModifier)
-    x1 = xCenter + math.sin(math.radians(Door.normalVector))*width + math.cos(math.radians(Door.normalVector))*thickness
-    x2 = xCenter + math.sin(math.radians(Door.normalVector))*width + math.cos(math.radians(Door.normalVector))*thickness
-    x3 = xCenter - math.sin(math.radians(Door.normalVector))*width - math.cos(math.radians(Door.normalVector))*thickness
-    x4 = xCenter - math.sin(math.radians(Door.normalVector))*width - math.cos(math.radians(Door.normalVector))*thickness
-    y1 = yCenter + math.sin(math.radians(Door.normalVector))*thickness + math.cos(math.radians(Door.normalVector))*width
-    y2 = yCenter - math.sin(math.radians(Door.normalVector))*thickness - math.cos(math.radians(Door.normalVector))*width
-    y3 = yCenter + math.sin(math.radians(Door.normalVector))*thickness + math.cos(math.radians(Door.normalVector))*width
-    y4 = yCenter - math.sin(math.radians(Door.normalVector))*thickness - math.cos(math.radians(Door.normalVector))*width
-
-    coords = "(%(x1)f,%(y1)f),(%(x2)f,%(y2)f),(%(x4)f,%(y4)f),(%(x3)f,%(y3)f),(%(x1)f,%(y1)f)" % locals()
-
-    return coords
-
-def getDoorCoords(Door):
-    if(Door.doorType.measurement_system_flag == "IMPERIAL_UNITS"):
-        unitModifier = 12.0
-    else:
-        unitModifier = 100.0
-    if(Door.doorType.measurement_system_flag == "IMPERIAL_UNITS"):
-        unitModifier = 12.0
-    else:
-        unitModifier = 100.0
-    xCenter = Door.xPos / unitModifier
-    yCenter = Door.yPos / unitModifier
-    thickness = 0.1 # TODO: sort out door and window thickness
-    width = Door.doorType.width / (2*unitModifier)
-    x1 = xCenter + math.sin(math.radians(Door.normalVector))*width + math.cos(math.radians(Door.normalVector))*thickness
-    x2 = xCenter + math.sin(math.radians(Door.normalVector))*width + math.cos(math.radians(Door.normalVector))*thickness
-    x3 = xCenter - math.sin(math.radians(Door.normalVector))*width - math.cos(math.radians(Door.normalVector))*thickness
-    x4 = xCenter - math.sin(math.radians(Door.normalVector))*width - math.cos(math.radians(Door.normalVector))*thickness
-    y1 = yCenter + math.sin(math.radians(Door.normalVector))*thickness + math.cos(math.radians(Door.normalVector))*width
-    y2 = yCenter - math.sin(math.radians(Door.normalVector))*thickness - math.cos(math.radians(Door.normalVector))*width
-    y3 = yCenter + math.sin(math.radians(Door.normalVector))*thickness + math.cos(math.radians(Door.normalVector))*width
-    y4 = yCenter - math.sin(math.radians(Door.normalVector))*thickness - math.cos(math.radians(Door.normalVector))*width
-
-    coords = "(%(x1)f,%(y1)f),(%(x2)f,%(y2)f),(%(x4)f,%(y4)f),(%(x3)f,%(y3)f),(%(x1)f,%(y1)f)" % locals()
-
-    return coords
-
-def compileDoor(f, Door, storyLocalPlacement, storyWalls):
     global ifcPointer
-    printRectangularShapeDef(f, getDoorOpeningCoords(Door), float(Door.doorType.height))
-    #615= IFCOPENINGELEMENT('0DzNJ20FL0ZQlbjUb8770P',#42,'Single-Flush:36" x 84":285019:1',$,$,#613,#607,'285019',.OPENING.);
-    f.write("#" + str(ifcPointer) + "= IFCOPENINGELEMENT('" + getGUID() + "', $, $, $, $, #" + str(storyLocalPlacement) + ", #" + str(ifcPointer-1) + ", $, .OPENING.);\n")
-    openingPointer = ifcPointer
-    ifcPointer +=1
-    printRectangularShapeDef(f, getDoorCoords(Door), float(Door.doorType.height))
-    #474= IFCDOOR('0DzNJ20FL0ZQlbjVf8770P',#42,'Single-Flush:36" x 84":285019',$,'Single-Flush:36" x 84"',#636,#467,'285019',7.,3.,.DOOR.,.NOTDEFINED.,$);
-    f.write("#" + str(ifcPointer) + "= IFCDOOR('" + getGUID() + "', $, $, $, $, #" + str(storyLocalPlacement) + ", #" + str(ifcPointer-1) + ", $, 7.,3.,.DOOR.,.NOTDEFINED.,$);\n")
-    doorPointer = ifcPointer
-    ifcPointer +=1
-    #632= IFCRELFILLSELEMENT('396YOskxfCdhVuHlpB3O$6',#42,$,$,#615,#474);
-    f.write("#" + str(ifcPointer) + "= IFCRELVOIDSELEMENT('" + getGUID() + "', $, $, $,#" + str(storyWalls[2]) + ", #" + str(openingPointer) + ");\n") # TODO: need to know which wall to attatch to
-    ifcPointer +=1
-    f.write("#" + str(ifcPointer) + "= IFCRELFILLSELEMENT('" + getGUID() + "', $, $, $,#" + str(openingPointer) + ", #" + str(doorPointer) + ");\n")
-    ifcPointer +=1
-    return "#" + str(ifcPointer-1) + ","
+    storyPointer = ifcPointer;
+    storyLocalPlacement = ifcPointer+3;
+    storyElements = ""
 
+    f.write("#" + str(ifcPointer) + "= IFCBUILDINGSTOREY('" + getGUID() + "',$,'Level 1',$,'Level:Level 1',#" + str(storyLocalPlacement) + ",$,'Level 1',.ELEMENT.,0.);\n")
+    ifcPointer +=1
+    f.write("#" + str(ifcPointer) + "= IFCCARTESIANPOINT((0.,0.,"+ str(PLACEHOLDER_ELEVATION) + "));\n")
+    ifcPointer +=1
+    f.write("#" + str(ifcPointer) + "= IFCAXIS2PLACEMENT3D(#" + str(ifcPointer-1) + ",$,$);\n")
+    ifcPointer +=1
+    f.write("#" + str(ifcPointer) + "= IFCLOCALPLACEMENT(#11,#" + str(ifcPointer-1) + ");\n")
+    ifcPointer +=1
+    f.write("#" + str(ifcPointer) + "= IFCRELAGGREGATES('" + getGUID() + "',$,$,$,#7,(#" + str(storyPointer) + "));\n")
+    ifcPointer +=1
+
+    for Wall in Story.listOfWalls:
+        storyElements = storyElements + compileWall(f, Wall, storyLocalPlacement)
+
+    storyElements = storyElements[:len(storyElements)-1] # Removes extra , from end of string
+
+    #222= IFCRELCONTAINEDINSPATIALSTRUCTURE('1btdOju4n3KfkQns9bRk3f',$,$,$,(#221),#storyPointer);
+    f.write("#" + str(ifcPointer) +"= IFCRELCONTAINEDINSPATIALSTRUCTURE('" + getGUID() + "',$,$,$,(" + storyElements + "),#" + str(storyPointer) + ");\n")
+    ifcPointer +=1
 
 # Main Function Call
 # buildingData is the data to be placed in the IFC
 def compile(buildingData):
     # Initialize File and Building Data
     f = open(filename, "w")
-
+    global unitModifier
     # Set up IFC Template
     f.write(ifcTemplate)
-    # if(buildingData.measurement_system_flag == "IMPERIAL_UNITS"):
-    # Placeholder used until measurement_system_flag functionality is clarified
-    if(True):
+
+    if(buildingData.isImperial):
+        unitModifier = 12.0
         f.write(ifcImperial)
     else:
         f.write(ifcMetric)
+        unitModifier = 100.0
 
     for Story in buildingData.listOfStories:
         compileStory(f, Story)

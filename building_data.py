@@ -366,7 +366,7 @@ class Wall:
     #0.0 represents horizontal wall
     #90.0 represents vertical wall
     #Angles rotate counterclockwise as per the unit circle
-    normalVector = np.inf
+    angle = np.inf
 
     #Reference to WallType object
     wallType = -1
@@ -382,19 +382,19 @@ class Wall:
     def __init__(self, \
                 pos=(np.inf, np.inf), \
                 length=np.inf, \
-                normalVector=np.inf, \
-                wallType=WallType(),:
+                angle=np.inf, \
+                wallType=WallType()):
 
         X, Y = pos
 
         assert type(X) == type(0.0) and type(Y) == type(0.0), f"pos must be a tuple of floats, got {type(X)} and {type(Y)}."
-        assert type(legnth) = type(0.0), f"length must be a type float, got type {type(length)}."
-        assert type(normalVector) == type(0.0), f"normalVector must be type float, got type {type(normalVector)}."
-        assert type(wallType) == type(wallType()), f"wallType must be WallType object, got type {type(wallType)}."
+        assert type(length) == type(0.0), f"length must be a type float, got type {type(length)}."
+        assert type(angle) == type(0.0), f"angle must be type float, got type {type(angle)}."
+        assert type(wallType) == type(WallType()), f"wallType must be WallType object, got type {type(wallType)}."
 
         self.xPos, self.yPos = pos
         self.length = length
-        self.normalVector = normalVector
+        self.angle = angle
         self.wallType = wallType
 
     #Returns tuple of coordiantes of the door
@@ -414,11 +414,10 @@ class Door:
 
     #hinges rotate counterclockwise
     #Where is the hinge on the door
-    hingePos = np.inf
+    hingePos = -1
 
     #Reference to DoorType object
     doorType = -1
-
 
     #Str array of info about wall
     #Includes tags
@@ -426,8 +425,8 @@ class Door:
 
     def __init__(self, \
                 position=np.inf, \
-                hingePos=np.inf, \
-                doorType=DoorType(),:
+                hingePos=-1, \
+                doorType=DoorType()):
 
         assert type(position) == type(0.0), f"position must be type float, got type {type(position)}."
         assert type(hingePos) == type(0), f"hingePost must be a type int, got type {type(hingePos)}."
@@ -445,7 +444,7 @@ class Window:
 
     #Which direction is the window facing
     #May end up not being needed
-    directionFacing = np.inf
+    directionFacing = -1
 
     #Reference to WindowType object
     windowType = -1
@@ -457,18 +456,18 @@ class Window:
     def __init__(self, \
                 position=np.inf, \
                 sillHeight=np.inf, \
-                directionFacing=np.inf, \
-                windowType=WindowType(),:
+                directionFacing=-1, \
+                windowType=WindowType()):
 
         assert type(position) == type(0.0), f"position must be type float, got type {type(position)}."
         assert type(sillHeight) == type(0.0), f"sillHeight must be type float, got type {type(sillHeight)}."
-        assert type(directionFacing) == type(0), f"hingePost must be a type int, got type {type(hingePos)}."
-        assert type(doorType) == type(DoorType()), f"doorType must be DoorType object, got type {type(doorType)}."
+        assert type(directionFacing) == type(0), f"directionFacing must be a type int, got type {type(directionFacing)}."
+        assert type(windowType) == type(WindowType()), f"windowType must be WindowType object, got type {type(windowType)}."
 
         self.position = position
         self.sillHeight = sillHeight
-        self.hingePos = hingePos
-        self.doorType = doorType
+        self.directionFacing = directionFacing
+        self.windowType = windowType
 
 buildingData = BuildingData()
 #horizontal
@@ -489,53 +488,52 @@ try:
 except:
     3
 
-#buildingData.appendElevation(0.0, measurement_system_flag="METRIC_UNITS")
+
 buildingData.appendElevation(0.0)
-#buildingData.appendElevation(400.0, measurement_system_flag="METRIC_UNITS")
-buildingData.appendElevation(400.0)
+
+buildingData.appendElevation(96.0)
 
 assert len(buildingData.listOfElevations) == 2
 assert buildingData.listOfElevations[0].height == 0.0
-assert buildingData.listOfElevations[1].height == 400.0
+assert buildingData.listOfElevations[1].height == 96.0
 
 buildingData.buildingSchedule.append(WallType(typeNumber=1, \
                                             name="das conk creet baybee", \
-                                            thickness=50.0)
-                                            #measurement_system_flag="METRIC_UNITS"))
+                                            thickness=8.0))
+
 buildingData.buildingSchedule.append(DoorType(typeNumber=2, \
                                             name="the Pearly Gates", \
-                                            height=200.0, \
-                                            width=120.0)
-                                            #measurement_system_flag="METRIC_UNITS"))
+                                            height=84.0, \
+                                            width=36.0))
+
 buildingData.buildingSchedule.append(WindowType(typeNumber=3, \
                                             name="the Pearly Gates", \
-                                            height=100.0, \
-                                            width=100.0, \
-                                            sillHeight=40.0)
-                                            #measurement_system_flag="METRIC_UNITS"))
+                                            height=24.0, \
+                                            width=24.0, \
+                                            sillHeight=12.0))
 
 buildingData.appendStory(bottomElevation = buildingData.listOfElevations[0], \
                         topElevation = buildingData.listOfElevations[1])
 
 #South wall
-buildingData.listOfStories[0].append(Wall(pos=(500.0, 25.0), length=1000.0, normalVector=0.0,\
+buildingData.listOfStories[0].append(Wall(pos=(120.0, 4.0), length=240.0, angle=0.0,\
                                         wallType=buildingData.buildingSchedule.searchByType(1)))
 
 #East wall
-buildingData.listOfStories[0].append(Wall(pos=(25.0, 500.0), length=1000.0, normalVector=90.0,\
+buildingData.listOfStories[0].append(Wall(pos=(4.0, 120.0), length=240.0, angle=90.0,\
                                         wallType=buildingData.buildingSchedule.searchByType(1)))
 
 #North wall
-buildingData.listOfStories[0].append(Wall(pos=(975.0, 500.0), length=1000.0, normalVector=90.0,\
+buildingData.listOfStories[0].append(Wall(pos=(236.0, 120.0), length=240.0, angle=90.0,\
                                         wallType=buildingData.buildingSchedule.searchByType(1)))
 
 #West wall
-buildingData.listOfStories[0].append(Wall(pos=(500.0, 975.0), length=1000.0, normalVector=0.0, \
+buildingData.listOfStories[0].append(Wall(pos=(120.0, 236.0), length=240.0, angle=0.0, \
                                         wallType=buildingData.buildingSchedule.searchByType(1)))
 
-#Door on north wall
-buildingData.listOfStories[0].append(Door(position=400.0, hingePos=0, \
-                                        doorType=buildingData.buildingSchedule.searchByType(2)))
+buildingData.listOfStories[0].listOfWalls[0].append(Door(position = 20.0, hingePos = 1, doorType = buildingData.buildingSchedule.searchByType(2)))
+
+buildingData.listOfStories[0].listOfWalls[0].append(Window(position = -40.0, directionFacing = 0, windowType = buildingData.buildingSchedule.searchByType(3)))
 
 ifc_compiler.compile(buildingData)
 
