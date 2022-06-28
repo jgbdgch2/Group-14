@@ -83,8 +83,8 @@ ifcMetric = """
 def getWindowCoords(Window):
     global unitModifier
     x = Window.windowType.width / (unitModifier*2)
-    y = Window.windowType.height / unitModifier
     sill = Window.windowType.sillHeight / unitModifier
+    y = (Window.windowType.height / unitModifier) + sill
     return "(({:.6f},-{:.6f}),({:.6f},{:.6f}),({:.6f},{:.6f}),({:.6f},-{:.6f}),({:.6f},-{:.6f}))".format(sill,x,sill,x,y,x,y,x,sill,x)
 
 def getDoorCoords(Door):
