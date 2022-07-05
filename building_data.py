@@ -20,6 +20,7 @@ class BuildingData:
         self.listOfStories = []
         self.listOfGridlines = []
         self.listOfElevations = []
+        self.isImperial = True
 
     #TODO delete, search functions
 
@@ -63,7 +64,7 @@ class Gridline:
         #    measurement_system_flag == "METRIC_UNITS", \
         #    f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", \
         #    got "{measurement_system_flag}" of type {type(measurement_system_flag)}. of type {type(measurement_system_flag)}'
-
+        self.name = "placeholder"
         self.cood0 = cood0
         self.cood1 = cood1
         #self.measurement_system_flag = measurement_system_flag
@@ -94,9 +95,9 @@ class Schedule:
     listOfWindowTypes = []
 
     def __init__(self):
-        listOfWallTypes = []
-        listOfDoorTypes = []
-        listOfWindowTypes = []
+        self.listOfWallTypes = []
+        self.listOfDoorTypes = []
+        self.listOfWindowTypes = []
 
     #Takes in WallType, DoorType, or WindowType class and adds it to the schedule
     #Do not add types with a type number of -1
@@ -304,7 +305,6 @@ class WindowType:
         #self.measurement_system_flag = measurement_system_flag
 
 class Story:
-    listOfWalls = []
 
     bottomElevation = -1
     topElevation = -1
@@ -314,7 +314,7 @@ class Story:
     def __init__(self, bottomElevation=-1, topElevation=-1):
         self.bottomElevation = bottomElevation
         self.topElevation = topElevation
-
+        self.listOfWalls = []
         assert type(bottomElevation) == type(Elevation()), f"bottomElevation must be elevation, got type {type(bottomElevation)}."
         assert type(topElevation) == type(Elevation()), f"topElevation must be elevation, got type {type(topElevation)}."
 
@@ -342,8 +342,6 @@ class Story:
         this.topElevation = topElevation
 
 class Wall:
-    listOfDoors = []
-    listOfWindows = []
 
     def append(self, element):
         if type(element) == type(Door()):
@@ -396,6 +394,9 @@ class Wall:
         self.length = length
         self.angle = angle
         self.wallType = wallType
+
+        self.listOfDoors = []
+        self.listOfWindows = []
 
     #Returns tuple of coordiantes of the door
     def getPos(self):
