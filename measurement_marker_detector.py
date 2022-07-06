@@ -38,8 +38,12 @@ def find_measurement_marker(file_name):
     print(detected_text, rW, rH)
     
     max_line = (0, 0, 0, 0)
+    
+    # Find line of maximum length
+    for points in lines:
+        max_line = compare_lines(points[0], max_line)
      
-    # Iterate over points
+    # Draw detected elements to image
     for points in lines:
           # Extracted points nested in the list
         x1,y1,x2,y2=points[0]
@@ -48,13 +52,7 @@ def find_measurement_marker(file_name):
         cv2.line(image,(x1,y1),(x2,y2),(0,255,0),2)
         # Maintain a simples lookup list for points
         lines_list.append([(x1,y1),(x2,y2)])
-        
-        
-        #print(((x1-x2)**2 + (y1-y2)**2)**(1/2))
-        max_line = compare_lines(points[0], max_line)
-        
-        
-        
+
     for (startX, startY, endX, endY) in detected_text:
         # scale the bounding box coordinates based on the respective
         # ratios
