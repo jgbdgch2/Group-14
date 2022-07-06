@@ -68,5 +68,3 @@ def find_measurement_marker(file_name):
     cv2.imwrite('detectedLines.png',image)
 
     return max_line
-
-find_measurement_marker('derp.png')
