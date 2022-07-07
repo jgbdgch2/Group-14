@@ -8,6 +8,7 @@ import platform
 import zipfile
 from pdf2image import convert_from_path, convert_from_bytes
 import building_data as bd
+import tkinter
 
 def make_black(image):
     image = image.convert('RGBA')
@@ -182,6 +183,20 @@ def convert_to_inches(str):
                 return float(''.join(inches))
     return 0.0
 
+def feature_extractor_window(available_features):
+    layout = [[sg.Text('Information Required for Feature Extraction')],
+              [sg.Text('Feature Name', size =(15, 1)), sg.InputText('Default Name', key='-FEATURE NAME-')],
+              [sg.Text('Feature Type:          '), sg.Combo(available_features, size=(10, 15),
+               key='-FEATURE TYPE-', readonly=True)],
+              [sg.Submit(bind_return_key=True), sg.Cancel()]]
+
+    window = sg.Window('Feature Extraction Tool', layout)
+    event, values = window.read()
+    window.close()
+    if event in (sg.WIN_CLOSED, 'Exit', 'Cancel') or values['-FEATURE TYPE-'] == '':
+        return None
+    return values
+
 def measure_tool_input_window(message):
     layout = [[sg.Text(message)],
               [sg.Text('Length', size =(15, 1)), sg.InputText(key='-TOOL LENGTH-'),
@@ -240,7 +255,7 @@ def main_gui():
     graph2_menu_def = ['&Right', ['Delete', 'Edit', 'Insert', 'E&xit']]
     # First is the top menu
     menu_def = [['&File', ['&Open     Ctrl-O', '&Save      Ctrl-S', 'E&xit']],
-                ['&Edit', ['!Extract Feature', '!Thing2']]]
+                ['&Edit', ['Extract Feature', '!Thing2']]]
 
     # Second the window layout...2 columns
     left_col = [[sg.Text('Feature List', size=(30, 1), key='-FOLDER-')],
@@ -276,9 +291,16 @@ def main_gui():
               [sg.vtop(sg.Column(left_col, element_justification='c')), sg.VSeperator(),sg.Column(images_col, element_justification='c')]]
 
     # --------------------------------- Create Window ---------------------------------
-    window = sg.Window('Blueprint Conversion', layout, resizable=True)
+    window = sg.Window('Blueprint Conversion', layout, resizable=False).finalize()
+    window.Maximize()
 
     # --------------------------------- Add feature objects ---------------------------
+    root = tkinter.Tk()
+    window_width = root.winfo_screenwidth()
+    window_height = root.winfo_screenheight()
+    root.destroy()
+    print('{}\n{}'.format(window_width, window_height))
+
     feature_images = {'Door':'door_right.gif'}
     available_features = ['Wall', 'Door']
     feat_list_wall = ['Concrete', 'Wood', 'Plaster']
@@ -295,11 +317,10 @@ def main_gui():
     fnames = [f for f in file_list if os.path.isfile(
         os.path.join(folder, f)) and f.lower().endswith((".png", ".jpg", "jpeg", ".tiff", ".bmp", ".gif"))] # .gif supports transparency
     '''
-    window.finalize()
     window['-FILE LIST-'].update(available_features) # door_right.gif
 
     # ----- Run the Event Loop -----
-    dragging1 = dragging2 = crop = set_distance = False
+    dragging1 = dragging2 = crop = set_distance = extract_feature = False
     graph1 = window["-GRAPH1-"]
     #help(graph1)
     #exit(0)
@@ -308,7 +329,8 @@ def main_gui():
     graph2.bind('<Button-3>', '+RIGHT2+')
     start_point = end_point = filename = feature_name = select_fig = img = None
     orig_img = a_set = bound_top = bound_bottom = fig = a_point = y_pixel_ratio = None
-    x_pixel_ratio = feature_path = user_distance = None
+    x_pixel_ratio = feature_path = user_distance = prior_rect = start_point1 = None
+    end_point1 = None
     feature_dict = {}
     # --------------------------------- Event Loop ---------------------------------
     while True:
@@ -323,17 +345,18 @@ def main_gui():
         if event == sg.WIN_CLOSED or event == 'Exit':
             break
         if event == 'Open     Ctrl-O':
+            mult = 10
             new_size = 1000
             pdf_file = get_pdf_name()
             page_num = get_user_digit('Enter Blueprint Page Number:')
             if pdf_file and page_num:
                 window.perform_long_operation(lambda :
-                                  get_pdf_as_image(new_size, pdf_file, page_num),
+                                  get_pdf_as_image(new_size*mult, pdf_file, page_num),
                                   '-LOADED PDF-')
         elif event == '-LOADED PDF-':
-            temp_img = values[event]
-            if temp_img is not None:
-                img = orig_img = temp_img
+            orig_img = values[event]
+            if orig_img:
+                img = resize_img(orig_img, (new_size, new_size))
                 graph1 = window["-GRAPH1-"]  # type: sg.Graph
                 graph1.erase()
                 graph1.set_size(img.size)
@@ -362,18 +385,14 @@ def main_gui():
             x, y = values["-GRAPH1-"]
             if not dragging1:
                 start_point1 = (x, y)
-                drag_figures = graph1.get_figures_at_location((x,y))
                 dragging1 = True
-                last1xy = x, y
             else:
                 end_point1 = (x, y)
-            delta_x, delta_y = x - last1xy[0], y - last1xy[1]
-            last1xy = x,y
-            if len(drag_figures) > 0:
-                select_fig = drag_figures[0] # This will always be the blueprint
-            if select_fig is not None and not crop and not set_distance:
-                graph1.move_figure(select_fig, delta_x, delta_y)
-                graph1.update()
+            graph1 = window["-GRAPH1-"]
+            if prior_rect:
+                graph1.delete_figure(prior_rect)
+            if None not in (start_point1, end_point1) and (crop or extract_feature):
+                prior_rect = graph1.draw_rectangle(start_point1, end_point1, line_width=4, line_color='red')
         elif event == "-GRAPH2-":  # if there's a "Graph" event, then it's a mouse
             x, y = values["-GRAPH2-"]
             if not dragging2:
@@ -397,7 +416,7 @@ def main_gui():
                 x, y = values["-GRAPH1-"]
                 end_point1 = (x, y)
                 start1_x, start1_y = start_point1
-                if crop:
+                if crop or extract_feature:
                     if x < start1_x:
                         left = x
                         right = start1_x
@@ -411,27 +430,54 @@ def main_gui():
                         bottom = img.size[1] - start1_y
                         top = img.size[1] - y
                     new_size = 1000
-                    img = img.crop((left, top, right, bottom))
-                    img = resize_img(img, (new_size, new_size))
                     graph1 = window["-GRAPH1-"]  # type: sg.Graph
-                    graph1.erase()
-                    graph1.set_size(img.size)
-                    graph1.change_coordinates((0,0), (img.size[0], img.size[1]))
-                    graph1.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
-                    window['-Hdivider-'].update('_'*int(new_size/16))
-                    crop = False
+                    if sg.popup_ok_cancel('Area selected\nPress Cancel to redraw') != 'OK':
+                        graph1.delete_figure(prior_rect)
+                        dragging1 = False
+                        continue
+                    if crop:
+                        orig_img = orig_img.crop((left*mult, top*mult, right*mult, bottom*mult))
+                        img = resize_img(orig_img, (new_size, new_size))
+                        graph1.erase()
+                        graph1.set_size(img.size)
+                        graph1.change_coordinates((0,0), (img.size[0], img.size[1]))
+                        graph1.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
+                        window['-Hdivider-'].update('_'*int(new_size/16))
+                        crop = False
+                    else:
+                        # feature selection gets sent to the feature extractor here
+                        h = orig_img.size[0] / img.size[0]
+                        v = orig_img.size[1] / img.size[1]
+                        feature_img = orig_img.crop((int(left*h), int(top*v), int(right*h), int(bottom*v)))
+                        '''
+                        # Used for trouble shooting
+                        temp_img = resize_img(feature_img, (new_size, new_size))
+                        graph1.erase()
+                        graph1.set_size(temp_img.size)
+                        graph1.change_coordinates((0,0), (temp_img.size[0], temp_img.size[1]))
+                        temp = graph1.draw_image(data=convert_to_bytes(temp_img), location=(0, temp_img.size[1]))'''
+                        feature_info = feature_extractor_window(available_features)
+                        '''
+                        # Used for trouble shooting
+                        graph1.delete_figure(temp)
+                        graph1.set_size(img.size)
+                        graph1.change_coordinates((0,0), (img.size[0], img.size[1]))
+                        graph1.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
+                        '''
+                        if not feature_info:
+                            sg.Popup('Feature information required for feature extraction')
+                        else:
+                            print('Extract Feature')
+                        graph1.delete_figure(prior_rect)
+                        extract_feature = False
                 elif set_distance:
                     if not a_set:
                         a_set = end_point1
-                        graph1.DrawCircle(a_set, 4, line_color='black', fill_color='white')
-                        a_point = graph1.get_figures_at_location(a_set)
-                        a_point = a_point[-1]
+                        a_point = graph1.DrawCircle(a_set, 4, line_color='black', fill_color='white')
                         sg.Popup('Select point B')
                     else:
                         x_distance, y_distance = end_point1[0] - a_set[0], end_point1[1] - a_set[1]
-                        graph1.DrawCircle(end_point1, 4, line_color='black', fill_color='white')
-                        b_point = graph1.get_figures_at_location(end_point1)
-                        b_point = b_point[-1]
+                        b_point = graph1.DrawCircle(end_point1, 4, line_color='black', fill_color='white')
                         if x_distance < 0:
                             x_distance = x_distance*-1
                         if y_distance < 0:
@@ -439,15 +485,21 @@ def main_gui():
                         if x_distance > y_distance:
                             while not user_distance or user_distance['-TOOL LENGTH-'] == 0:
                                 user_distance = measure_tool_input_window('Input x-axis distance')
-                            x_pixel_ratio = x_distance / user_distance['-TOOL LENGTH-']
-                            sg.Popup('x-axis set')
-                            print(x_pixel_ratio)
+                                if user_distance == None:
+                                    break
+                            if user_distance:
+                                x_pixel_ratio = x_distance / user_distance['-TOOL LENGTH-']
+                                sg.Popup('x-axis set')
+                                print(x_pixel_ratio)
                         else:
                             while not user_distance or user_distance['-TOOL LENGTH-'] == 0:
                                 user_distance = measure_tool_input_window('Input y-axis distance')
-                            y_pixel_ratio = y_distance / user_distance['-TOOL LENGTH-']
-                            sg.Popup('y-axis set')
-                            print(y_pixel_ratio)
+                                if user_distance == None:
+                                    break
+                            if user_distance:
+                                y_pixel_ratio = y_distance / user_distance['-TOOL LENGTH-']
+                                sg.Popup('y-axis set')
+                                print(y_pixel_ratio)
                         graph1.delete_figure(a_point)
                         graph1.delete_figure(b_point)
                         a_set = a_point = b_point = user_distance = None
@@ -469,12 +521,8 @@ def main_gui():
                 else:
                     # Draw the bounds around the image
                     bounds = graph2.get_bounding_box(select_fig)
-                    graph2.DrawCircle(bounds[0], 7, line_color='black', fill_color='white')
-                    bound_top = graph2.get_figures_at_location(bounds[0])
-                    graph2.DrawCircle(bounds[1], 7, line_color='black', fill_color='white')
-                    bound_bottom = graph2.get_figures_at_location(bounds[1])
-                    bound_top = bound_top[-1]
-                    bound_bottom = bound_bottom[-1]
+                    bound_top = graph2.DrawCircle(bounds[0], 7, line_color='black', fill_color='white')
+                    bound_bottom = graph2.DrawCircle(bounds[1], 7, line_color='black', fill_color='white')
                 info = 'start X: {} start Y: {}\nend X: {}  end Y: {}'.format(start2_x, start2_y, x, y)
                 # sg.popup('Dragging Done!\n{}'.format(info)) # This line can be used for trouble shooting mouse positions
                 dragging2 = False
@@ -486,12 +534,8 @@ def main_gui():
                 select_fig = None
             else:
                 bounds = graph2.get_bounding_box(select_fig)
-                graph2.DrawCircle(bounds[0], 7, line_color='black', fill_color='white')
-                bound_top = graph2.get_figures_at_location(bounds[0])
-                graph2.DrawCircle(bounds[1], 7, line_color='black', fill_color='white')
-                bound_bottom = graph2.get_figures_at_location(bounds[1])
-                bound_top = bound_top[-1]
-                bound_bottom = bound_bottom[-1]
+                bound_top = graph2.DrawCircle(bounds[0], 7, line_color='black', fill_color='white')
+                bound_bottom = graph2.DrawCircle(bounds[1], 7, line_color='black', fill_color='white')
         elif  event == 'Delete':
             if select_fig is not None:
                 graph2.delete_figure(select_fig)
@@ -524,13 +568,9 @@ def main_gui():
                 feature = make_transparent_edges(feature)
             graph2 = window["-GRAPH2-"]  # type: sg.Graph
             if event == 'Insert':
-                graph2.draw_image(data=convert_to_bytes(feature), location=(x, y))
-                fig_id = graph2.get_figures_at_location((x + shape[0] // 2, y - shape[1] // 2))
+                fig_id = graph2.draw_image(data=convert_to_bytes(feature), location=(x, y))
             else:
-                graph2.draw_image(data=convert_to_bytes(feature), location=(300, feature.size[1]))
-                fig_id = graph2.get_figures_at_location((300 + shape[0] // 2,
-                                                         feature.size[1] - shape[1] // 2))
-            fig_id = fig_id[-1]
+                fig_id = graph2.draw_image(data=convert_to_bytes(feature), location=(300, feature.size[1]))
             new_feature = bd.DoorType(1, 'This name', 0.01, 0.01)
             print(fig_id)
             feature_dict[fig_id] = new_feature
@@ -550,6 +590,9 @@ def main_gui():
         elif  event == 'Set Distance':
             set_distance = True
             sg.Popup('Select point A')
+        elif  event == 'Extract Feature':
+            sg.Popup('Select the feature to be extracted')
+            extract_feature = True
     # --------------------------------- Close & Exit ---------------------------------
     window.close()
 
