@@ -87,6 +87,12 @@ class Elevation:
 
         self.height = height
         #self.measurement_system_flag = measurement_system_flag
+        
+    def setHeight(self, height):
+        assert type(height) == type(0.0), f"Height must be float, got type {type(height)}"
+        self.height = height
+    def getHeight(self):
+        return self.height
 
 class Schedule:
     #3 seperate lists representing each schedule
@@ -330,16 +336,22 @@ class Story:
 
     #Meaningless functions until I implement elevations
     def getBottomElevation(self):
-        return this.bottomElevation
+        return self.bottomElevation
 
     def getTopElevation(self):
-        return this.topElevation
+        return self.topElevation
 
     def setBottomElevation(self, bottomElevation):
-        this.bottomElevation = bottomElevation
-
+        self.bottomElevation = bottomElevation
+    
     def setTopElevation(self, topElevation):
-        this.topElevation = topElevation
+        self.topElevation = topElevation
+
+    def updateTopElevation(self, height):
+        self.topElevation.setHeight(height)
+        
+    def updateBottomElevation(self, height):
+        self.bottomElevation.setHeight(height)
 
 class Wall:
 
@@ -508,13 +520,17 @@ buildingData.buildingSchedule.append(DoorType(typeNumber=2, \
                                             width=36.0))
 
 buildingData.buildingSchedule.append(WindowType(typeNumber=3, \
-                                            name="the Pearly Gates", \
+                                            name="the Pearly window", \
                                             height=24.0, \
                                             width=24.0, \
                                             sillHeight=12.0))
 
 buildingData.appendStory(bottomElevation = buildingData.listOfElevations[0], \
                         topElevation = buildingData.listOfElevations[1])
+                        
+buildingData.listOfStories[0].updateTopElevation(120.0)
+
+assert buildingData.listOfStories[0].getTopElevation().getHeight() == 120.0
 
 #South wall
 buildingData.listOfStories[0].append(Wall(pos=(120.0, 4.0), length=240.0, angle=0.0,\
