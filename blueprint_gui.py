@@ -234,6 +234,8 @@ def feature_input_window(feat_list, feature_name):
     window = sg.Window('New Feature', layout)
     event, values = window.read()
     window.close()
+    if event in (sg.WIN_CLOSED, 'Exit', 'Cancel'):
+        return None
     if not values['-LENGTH IS IMPERIAL-']:
         values['-FEATURE LENGTH-'] = convert_to_centimeters(values['-FEATURE LENGTH-'])
         values['-FEATURE LENGTH-'] *= 0.393701
@@ -244,8 +246,6 @@ def feature_input_window(feat_list, feature_name):
         values['-FEATURE WIDTH-'] *= 0.393701
     else:
         values['-FEATURE WIDTH-'] = convert_to_inches(values['-FEATURE WIDTH-'])
-    if event in (sg.WIN_CLOSED, 'Exit', 'Cancel'):
-        return None
     return values
 
 def main_gui():
@@ -254,7 +254,7 @@ def main_gui():
     graph1_menu_def = ['&Right', ['Rotate', '!&Click', 'Set Distance', 'E&xit']]
     graph2_menu_def = ['&Right', ['Delete', 'Edit', 'Insert', 'E&xit']]
     # First is the top menu
-    menu_def = [['&File', ['&Open     Ctrl-O', '&Save      Ctrl-S', 'E&xit']],
+    menu_def = [['&File', ['&New       Ctrl-N', '&Save      Ctrl-S', 'E&xit']],
                 ['&Edit', ['Extract Feature', '!Thing2']]]
 
     # Second the window layout...2 columns
@@ -286,15 +286,20 @@ def main_gui():
                       drag_submits=True)]]
 
 
-    # ----- Full layout -----
+    # -------------------------------- Full layout ------------------------------------
     layout = [[sg.Menu(menu_def, tearoff=False, key='-MENU BAR-')],
-              [sg.vtop(sg.Column(left_col, element_justification='c')), sg.VSeperator(),sg.Column(images_col, element_justification='c')]]
+              [sg.vtop(sg.Column(left_col, element_justification='c')), sg.VSeperator(),
+               sg.Column(images_col, element_justification='c')]]
 
     # --------------------------------- Create Window ---------------------------------
     window = sg.Window('Blueprint Conversion', layout, resizable=False).finalize()
     window.Maximize()
 
     # --------------------------------- Add feature objects ---------------------------
+    buildingData = bd.BuildingData()
+    elevation1 = bd.Elevation(0.0)
+    elevation2 = bd.Elevation(0.0)
+    buildingData.appendStory(bottomElevation = elevation1, topElevation = elevation2)
     root = tkinter.Tk()
     window_width = root.winfo_screenwidth()
     window_height = root.winfo_screenheight()
@@ -330,7 +335,7 @@ def main_gui():
     start_point = end_point = filename = feature_name = select_fig = img = None
     orig_img = a_set = bound_top = bound_bottom = fig = a_point = y_pixel_ratio = None
     x_pixel_ratio = feature_path = user_distance = prior_rect = start_point1 = None
-    end_point1 = None
+    end_point1 = graph2 = None
     feature_dict = {}
     # --------------------------------- Event Loop ---------------------------------
     while True:
@@ -344,15 +349,17 @@ def main_gui():
             #break
         if event == sg.WIN_CLOSED or event == 'Exit':
             break
-        if event == 'Open     Ctrl-O':
+        if event == 'New       Ctrl-N':
             mult = 10
             new_size = 1000
             pdf_file = get_pdf_name()
-            page_num = get_user_digit('Enter Blueprint Page Number:')
+            if pdf_file:
+                page_num = get_user_digit('Enter Blueprint Page Number:')
             if pdf_file and page_num:
                 window.perform_long_operation(lambda :
                                   get_pdf_as_image(new_size*mult, pdf_file, page_num),
                                   '-LOADED PDF-')
+                sg.Popup('Blueprint is loading...')
         elif event == '-LOADED PDF-':
             orig_img = values[event]
             if orig_img:
@@ -377,6 +384,8 @@ def main_gui():
             if not y_pixel_ratio or not x_pixel_ratio:
                 sg.popup('Pixel Ratios not set!\n\nRight click on Blueprint to use measurement tool')
                 continue
+            if graph2:
+                print('not good')
             graph2 = window["-GRAPH2-"]  # type: sg.Graph
             graph2.set_size(img.size)
             graph2.change_coordinates((0,0), (img.size[0], img.size[1]))
@@ -545,7 +554,7 @@ def main_gui():
                 sg.Popup('No Feature selected')
             else:
                 print('this works')
-        elif feature_path is not None and (event == 'Insert' or event == "-Feature-"):
+        elif graph2 is not None and event in ('Insert', "-Feature-"):
             # Get the user input for the object by creating another window
             # Returns a dictionary of strings in list format (if a key is not used)
             feature_info = feature_input_window(feat_types, feature_name)
@@ -560,7 +569,6 @@ def main_gui():
             new_size = feature_info['-FEATURE LENGTH-'] // x_pixel_ratio
             shape = new_size, new_size
             image_in = image_formating(feature_path, resize=(shape))
-            feature_path = None
             feature = resize_img(image_in, shape)
             feature = make_black(feature)
             feature = feature.rotate(rotate_angle, fillcolor=(250, 150, 50), expand=True)
