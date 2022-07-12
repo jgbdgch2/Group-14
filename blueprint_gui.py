@@ -7,8 +7,9 @@ import ctypes
 import platform
 import zipfile
 from pdf2image import convert_from_path, convert_from_bytes
-import building_data as bd
 import tkinter
+
+import building_data as bd
 
 def make_black(image):
     image = image.convert('RGBA')
@@ -143,7 +144,7 @@ def get_pdf_as_image(new_size, filename, page_num):
 
 def convert_to_centimeters(str):
     value = []
-    if str == '' or not str[0].isdigit():
+    if str == '' or not str[0].isdigit() or not str[-1] in ('M', 'm'):
         return 0.0
     for char in str:
         if char.isdigit() or char == '.':
@@ -161,10 +162,12 @@ def convert_to_inches(str):
     feet = []
     inches = []
     is_feet = True
-    if not "'" in str:
-        is_feet = False
     if str == '' or not str[0].isdigit():
         return 0.0
+    if not "'" in str:
+        is_feet = False
+        if not '"' in str:
+            return 0.0
     if str.endswith("'") and not '"' in str:
         if str[:-1].isdigit():
             return float(str[:-1]) * 12
@@ -185,7 +188,7 @@ def convert_to_inches(str):
 
 def feature_extractor_window(available_features):
     layout = [[sg.Text('Information Required for Feature Extraction')],
-              [sg.Text('Feature Name', size =(15, 1)), sg.InputText('Default Name', key='-FEATURE NAME-')],
+              [sg.Text('Feature Name', size =(15, 1)), sg.InputText(key='-FEATURE NAME-')],
               [sg.Text('Feature Type:          '), sg.Combo(available_features, size=(10, 15),
                key='-FEATURE TYPE-', readonly=True)],
               [sg.Submit(bind_return_key=True), sg.Cancel()]]
@@ -195,6 +198,35 @@ def feature_extractor_window(available_features):
     window.close()
     if event in (sg.WIN_CLOSED, 'Exit', 'Cancel') or values['-FEATURE TYPE-'] == '':
         return None
+    return values
+
+def story_input_tool(name):
+    layout = [[sg.Text('Please enter the new story information')],
+              [sg.Text('Story Name', size =(15, 1)), sg.InputText(name, key='-STORY NAME-')],
+              [sg.Text('Bottom Elevation', size =(15, 1)), sg.InputText(key='-BOTTOM ELEVATION-'),
+                        sg.Radio('Imperial', "LENGTH1", default=True, key='-BOTTOM IS IMPERIAL-'),
+                        sg.Radio('Metric', "LENGTH1", default=False)],
+              [sg.Text('Top Elevation', size =(15, 1)), sg.InputText(key='-TOP ELEVATION-'),
+                        sg.Radio('Imperial', "LENGTH2", default=True, key='-TOP IS IMPERIAL-'),
+                        sg.Radio('Metric', "LENGTH2", default=False)],
+              [sg.Submit(bind_return_key=True), sg.Cancel()]]
+
+    window = sg.Window('Story Input Tool', layout)
+    event, values = window.read()
+    window.close()
+    if event in (sg.WIN_CLOSED, 'Exit', 'Cancel'):
+        return None
+    if not values['-BOTTOM IS IMPERIAL-']:
+        values['-BOTTOM ELEVATION-'] = convert_to_centimeters(values['-BOTTOM ELEVATION-'])
+        values['-BOTTOM ELEVATION-'] *= 0.393701
+    else:
+        values['-BOTTOM ELEVATION-'] = convert_to_inches(values['-BOTTOM ELEVATION-'])
+    if not values['-TOP IS IMPERIAL-']:
+        values['-TOP ELEVATION-'] = convert_to_centimeters(values['-TOP ELEVATION-'])
+        values['-TOP ELEVATION-'] *= 0.393701
+    else:
+        values['-TOP ELEVATION-'] = convert_to_inches(values['-TOP ELEVATION-'])
+    print(values)
     return values
 
 def measure_tool_input_window(message):
@@ -207,19 +239,19 @@ def measure_tool_input_window(message):
     window = sg.Window('Distance Input', layout)
     event, values = window.read()
     window.close()
+    if event in (sg.WIN_CLOSED, 'Exit', 'Cancel'):
+        return None
     if not values['-LENGTH IS IMPERIAL-']:
         values['-TOOL LENGTH-'] = convert_to_centimeters(values['-TOOL LENGTH-'])
         values['-TOOL LENGTH-'] *= 0.393701
     else:
         values['-TOOL LENGTH-'] = convert_to_inches(values['-TOOL LENGTH-'])
-    if event in (sg.WIN_CLOSED, 'Exit', 'Cancel'):
-        return None
     return values
 
 def feature_input_window(feat_list, feature_name):
     message = ('Please enter {} information').format(feature_name)
     layout = [[sg.Text(message)],
-              [sg.Text('Feature Name', size =(15, 1)), sg.InputText('Default Name', key='-FEATURE NAME-')],
+              [sg.Text('Feature Name', size =(15, 1)), sg.InputText(key='-FEATURE NAME-')],
               [sg.Text('Length', size =(15, 1)), sg.InputText(key='-FEATURE LENGTH-'),
                         sg.Radio('Imperial', "LENGTH", default=True, key='-LENGTH IS IMPERIAL-'),
                         sg.Radio('Metric', "LENGTH", default=False)],
@@ -261,7 +293,8 @@ def main_gui():
     left_col = [[sg.Text('Feature List', size=(30, 1), key='-FOLDER-')],
                 [sg.Listbox(values=[], enable_events=True, size=(30,20),key='-FILE LIST-')],# This creates a listbox for the images in the folder
                 [sg.Button('add feature', key='-Feature-')], # This allows the features to be added to the converted blueprint
-                [sg.Button('Convert', key='-Convert-')]]
+                [sg.Button('Convert', key='-Convert-')],
+                [sg.Listbox(values=[], enable_events=True, size=(30,10),key='-STORY LIST-')]]
 
     # Creates the column for the image
     images_col = [[sg.Push(), sg.Text('Open a new project', key='-TOUT-'), sg.Push()],
@@ -291,26 +324,29 @@ def main_gui():
               [sg.vtop(sg.Column(left_col, element_justification='c')), sg.VSeperator(),
                sg.Column(images_col, element_justification='c')]]
 
-    # --------------------------------- Create Window ---------------------------------
-    window = sg.Window('Blueprint Conversion', layout, resizable=False).finalize()
-    window.Maximize()
-
-    # --------------------------------- Add feature objects ---------------------------
-    buildingData = bd.BuildingData()
-    elevation1 = bd.Elevation(0.0)
-    elevation2 = bd.Elevation(0.0)
-    buildingData.appendStory(bottomElevation = elevation1, topElevation = elevation2)
+    # -------------------------------- Get Monitor info --------------------------------
+    temp = sg.Window('', [[sg.Text('')]]).finalize()
     root = tkinter.Tk()
+    temp.close()
     window_width = root.winfo_screenwidth()
     window_height = root.winfo_screenheight()
     root.destroy()
     print('{}\n{}'.format(window_width, window_height))
+    # --------------------------------- Create Window ---------------------------------
+    window = sg.Window('Blueprint Conversion', layout, resizable=False).finalize()
+    window.Maximize()
+    window.Element('-STORY LIST-').Update(visible=False)
+    window.Element('-GRAPH1-').Update(visible=False)
+    window.Element('-GRAPH2-').Update(visible=False)
 
-    feature_images = {'Door':'door_right.gif'}
-    available_features = ['Wall', 'Door']
+    # --------------------------------- Add feature objects ---------------------------
+    buildingData = bd.BuildingData()
+    feature_images = {'Door':'door_right.gif', 'Wall':'wall.gif', 'Window':'window.gif'}
+    available_features = ['Wall', 'Door', 'Window']
     feat_list_wall = ['Concrete', 'Wood', 'Plaster']
     feat_list_door = ['Steel', 'Wood', 'Screen']
-    feat_types = {'Wall':feat_list_wall, 'Door':feat_list_door}
+    feat_list_window = ['Single Pane', 'Double Pane', 'French']
+    feat_types = {'Wall':feat_list_wall, 'Door':feat_list_door, 'Window':feat_list_window}
 
     folder = os.getcwd()
     folder = os.path.join(folder, 'blueprint_features')
@@ -340,16 +376,14 @@ def main_gui():
     # --------------------------------- Event Loop ---------------------------------
     while True:
         event, values = window.read()
-        if bound_top: # always delete the bounds if they exist
+        if bound_top and event != '-FILE LIST-': # delete the bounds if they exist
             # delete bounds
             graph2.delete_figure(bound_top)
             graph2.delete_figure(bound_bottom)
             bound_top = bound_bottom = None
-        #if event in (sg.WIN_CLOSED, 'Exit'): # Both of these exit lines do the same thing
-            #break
-        if event == sg.WIN_CLOSED or event == 'Exit':
+        if event in (sg.WIN_CLOSED, 'Exit'): # Closes the App
             break
-        if event == 'New       Ctrl-N':
+        if event == 'New       Ctrl-N': # Creates a new blueprint conversion environment
             mult = 10
             new_size = 1000
             pdf_file = get_pdf_name()
@@ -359,8 +393,25 @@ def main_gui():
                 window.perform_long_operation(lambda :
                                   get_pdf_as_image(new_size*mult, pdf_file, page_num),
                                   '-LOADED PDF-')
+                story_info = story_input_tool('First Floor')
+                while not story_info or story_info['-BOTTOM ELEVATION-'] >= story_info['-TOP ELEVATION-']:
+                    if story_info == None:
+                        sg.Popup('Story Information must be correctly added')
+                        story_info = story_input_tool('First Floor')
+                    else:
+                        story_info = story_input_tool(story_info['-STORY NAME-'])
+                buildingData.appendStory(bottomElevation = bd.Elevation(story_info['-BOTTOM ELEVATION-']), \
+                                        topElevation = bd.Elevation(story_info['-TOP ELEVATION-']))
                 sg.Popup('Blueprint is loading...')
+                start_point = end_point = filename = feature_name = select_fig = img = None
+                orig_img = a_set = bound_top = bound_bottom = fig = a_point = y_pixel_ratio = None
+                x_pixel_ratio = feature_path = user_distance = prior_rect = start_point1 = None
+                end_point1 = None
+                feature_dict = {}
         elif event == '-LOADED PDF-':
+            if graph2:
+                graph2 = None
+                window.Element('-GRAPH2-').Update(visible=False)
             orig_img = values[event]
             if orig_img:
                 img = resize_img(orig_img, (new_size, new_size))
@@ -370,7 +421,8 @@ def main_gui():
                 graph1.change_coordinates((0,0), (img.size[0], img.size[1]))
                 graph1.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
                 window['-Hdivider-'].update('_'*int(new_size/16))
-                window['-TOUT-'].update('')
+                window['-TOUT-'].update(visible=False)
+                window.Element('-GRAPH1-').Update(visible=True)
                 sg.popup('Select the area of interest.')
                 crop = True
         elif event == '-FILE LIST-':    # A file was chosen from the listbox
@@ -384,12 +436,11 @@ def main_gui():
             if not y_pixel_ratio or not x_pixel_ratio:
                 sg.popup('Pixel Ratios not set!\n\nRight click on Blueprint to use measurement tool')
                 continue
-            if graph2:
-                print('not good')
             graph2 = window["-GRAPH2-"]  # type: sg.Graph
             graph2.set_size(img.size)
             graph2.change_coordinates((0,0), (img.size[0], img.size[1]))
             graph2.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
+            window.Element('-GRAPH2-').Update(visible=True)
         elif event == "-GRAPH1-":  # if there's a "Graph" event, then it's a mouse
             x, y = values["-GRAPH1-"]
             if not dragging1:
@@ -557,6 +608,9 @@ def main_gui():
         elif graph2 is not None and event in ('Insert', "-Feature-"):
             # Get the user input for the object by creating another window
             # Returns a dictionary of strings in list format (if a key is not used)
+            if feature_name in ('Door', 'Window') and select_fig == None:
+                sg.Popup('Please select a Wall for inserting Doors and windows')
+                continue
             feature_info = feature_input_window(feat_types, feature_name)
             if (feature_info == None or feature_info['-FEATURE LENGTH-'] == 0
                 or feature_info['-FEATURE WIDTH-'] == 0):
@@ -598,7 +652,7 @@ def main_gui():
         elif  event == 'Set Distance':
             set_distance = True
             sg.Popup('Select point A')
-        elif  event == 'Extract Feature':
+        elif  event == 'Extract Feature' and graph2:
             sg.Popup('Select the feature to be extracted')
             extract_feature = True
     # --------------------------------- Close & Exit ---------------------------------
