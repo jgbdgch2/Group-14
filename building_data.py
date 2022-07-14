@@ -42,7 +42,7 @@ class BuildingData:
     def appendStory(self, bottomElevation, topElevation):
         buffer = Story(bottomElevation, topElevation)
         self.listOfStories.append(buffer)
-        
+
     def findWallJoinsHelper(self):
         for x in self.listOfStories:
             x.findWallJoins()
@@ -91,7 +91,7 @@ class Elevation:
 
         self.height = height
         #self.measurement_system_flag = measurement_system_flag
-        
+
     def setHeight(self, height):
         assert type(height) == type(0.0), f"Height must be float, got type {type(height)}"
         self.height = height
@@ -193,6 +193,9 @@ class WallType:
     typeNumber = -1
     name = ""
     thickness = -1.0
+
+    # For IFC Compiler usage
+    ifcName = 0
 
     #Str array of info about wall type
     information = []
@@ -350,50 +353,50 @@ class Story:
 
     def setBottomElevation(self, bottomElevation):
         self.bottomElevation = bottomElevation
-    
+
     def setTopElevation(self, topElevation):
         self.topElevation = topElevation
 
     def updateTopElevation(self, height):
         self.topElevation.setHeight(height)
-        
+
     def updateBottomElevation(self, height):
         self.bottomElevation.setHeight(height)
-        
+
     def findWallJoins(self):
         for i in range(len(self.listOfWalls)):
             for j in range(i + 1, len(self.listOfWalls)):
                 if self.findWallJoinsAssit(self.listOfWalls[i], self.listOfWalls[j]):
                     self.listOfWallJoins.append((self.listOfWalls[i], self.listOfWalls[j]))
-    
+
     #Uses triangle method to find if any corner of either will is inside the other wall
     #Potentially unstable due to floating point math
     def findWallJoinsAssit(self, wallOne, wallTwo):
-        
+
         #Finds the corners of the wall by going out the length of the wall from the center and adding or subtracting the thickness
         wallOnePointscB = (round(wallOne.xPos + wallOne.length/2 * np.cos(wallOne.angle*np.pi/180) + wallOne.getThickness() * np.sin(wallOne.angle*np.pi/180), 4)\
-                       , round(wallOne.yPos + wallOne.length/2 * np.sin(wallOne.angle*np.pi/180) + wallOne.getThickness() * np.cos(wallOne.angle*np.pi/180), 4))       
+                       , round(wallOne.yPos + wallOne.length/2 * np.sin(wallOne.angle*np.pi/180) + wallOne.getThickness() * np.cos(wallOne.angle*np.pi/180), 4))
         wallOnePointscC = (round(wallOne.xPos + wallOne.length/2 * np.cos(wallOne.angle*np.pi/180) - wallOne.getThickness() * np.sin(wallOne.angle*np.pi/180), 4)\
-                       , round(wallOne.yPos + wallOne.length/2 * np.sin(wallOne.angle*np.pi/180) - wallOne.getThickness() * np.cos(wallOne.angle*np.pi/180), 4))        
+                       , round(wallOne.yPos + wallOne.length/2 * np.sin(wallOne.angle*np.pi/180) - wallOne.getThickness() * np.cos(wallOne.angle*np.pi/180), 4))
         wallOnePointscA = (round(wallOne.xPos - wallOne.length/2 * np.cos(wallOne.angle*np.pi/180) + wallOne.getThickness() * np.sin(wallOne.angle*np.pi/180), 4)\
                        , round(wallOne.yPos - wallOne.length/2 * np.sin(wallOne.angle*np.pi/180) + wallOne.getThickness() * np.cos(wallOne.angle*np.pi/180), 4))
         wallOnePointscD = (round(wallOne.xPos - wallOne.length/2 * np.cos(wallOne.angle*np.pi/180) - wallOne.getThickness() * np.sin(wallOne.angle*np.pi/180), 4)\
                        , wallOne.yPos - wallOne.length/2 * np.sin(wallOne.angle*np.pi/180) - wallOne.getThickness() * np.cos(wallOne.angle*np.pi/180))
         wallOnePoints = (wallOnePointscA, wallOnePointscB, wallOnePointscC, wallOnePointscD)
-                        
-                        
+
+
         wallTwoPointscB = (round(wallTwo.xPos + wallTwo.length/2 * np.cos(wallTwo.angle*np.pi/180) + wallTwo.getThickness() * np.sin(wallTwo.angle*np.pi/180), 4)\
                        , round(wallTwo.yPos + wallTwo.length/2 * np.sin(wallTwo.angle*np.pi/180) + wallTwo.getThickness() * np.cos(wallTwo.angle*np.pi/180), 4))
         wallTwoPointscC = (round(wallTwo.xPos + wallTwo.length/2 * np.cos(wallTwo.angle*np.pi/180) - wallTwo.getThickness() * np.sin(wallTwo.angle*np.pi/180), 4)\
-                       , round(wallTwo.yPos + wallTwo.length/2 * np.sin(wallTwo.angle*np.pi/180) - wallTwo.getThickness() * np.cos(wallTwo.angle*np.pi/180), 4))    
+                       , round(wallTwo.yPos + wallTwo.length/2 * np.sin(wallTwo.angle*np.pi/180) - wallTwo.getThickness() * np.cos(wallTwo.angle*np.pi/180), 4))
         wallTwoPointscA = (round(wallTwo.xPos - wallTwo.length/2 * np.cos(wallTwo.angle*np.pi/180) + wallTwo.getThickness() * np.sin(wallTwo.angle*np.pi/180), 4)\
-                       , round(wallTwo.yPos - wallTwo.length/2 * np.sin(wallTwo.angle*np.pi/180) + wallTwo.getThickness() * np.cos(wallTwo.angle*np.pi/180), 4))   
+                       , round(wallTwo.yPos - wallTwo.length/2 * np.sin(wallTwo.angle*np.pi/180) + wallTwo.getThickness() * np.cos(wallTwo.angle*np.pi/180), 4))
         wallTwoPointscD = (round(wallTwo.xPos - wallTwo.length/2 * np.cos(wallTwo.angle*np.pi/180) - wallTwo.getThickness() * np.sin(wallTwo.angle*np.pi/180), 4)\
                        , round(wallTwo.yPos - wallTwo.length/2 * np.sin(wallTwo.angle*np.pi/180) - wallTwo.getThickness() * np.cos(wallTwo.angle*np.pi/180), 4))
         wallTwoPoints = (wallTwoPointscA, wallTwoPointscB, wallTwoPointscC, wallTwoPointscD)
-        
+
         #Check each point against the opposing rectangle
-        
+
         for p in wallTwoPoints:
             ret = self.isInsideSquare(wallOnePoints, p)
             if ret == True:
@@ -403,11 +406,11 @@ class Story:
             if ret == True:
                 return ret
         return False
-        
+
     def triangleArea(self, A, B, C):
         ret = (C[0]*B[1] - B[0]*C[1]) - (C[0]*A[1] - A[0]*C[1]) + (B[0]*A[1] - A[0]*B[1]) > 0
         return(ret)
-    
+
     def isInsideSquare(self, square, p):
         a, b, c, d = square
         if self.triangleArea(a,b,p) or \
@@ -590,7 +593,7 @@ buildingData.buildingSchedule.append(WindowType(typeNumber=3, \
 
 buildingData.appendStory(bottomElevation = buildingData.listOfElevations[0], \
                         topElevation = buildingData.listOfElevations[1])
-                        
+
 buildingData.listOfStories[0].updateTopElevation(120.0)
 
 assert buildingData.listOfStories[0].getTopElevation().getHeight() == 120.0

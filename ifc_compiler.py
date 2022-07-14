@@ -290,6 +290,10 @@ def compileWall(f, Wall, storyLocalPlacement):
     #221= IFCWALL('1btdOju4n3KfkQnsDbRkrg', $, $, $, $, #storyLocalPlacement, #220, '2712', .NOTDEFINED.);
     f.write("#" + str(ifcPointer) + "= IFCWALL('" + getGUID() + "', $, $, $, $, #" + str(storyLocalPlacement) + ", #" + str(ifcPointer-1) + ", $, .NOTDEFINED.);\n")
     ifcWallPointer = ifcPointer
+    Wall.ifcName = "#" + str(ifcWallPointer)
+    ifcPointer +=1
+    #549= IFCRELASSOCIATESMATERIAL('2R$msq7Cf1IwcXgYEmhjOH',$,$,$,(#184),#406);
+    f.write("#" + str(ifcPointer) + "= IFCRELASSOCIATESMATERIAL('" + getGUID() + "',$,$,$,(#" + str(ifcWallPointer) + "),#" + str(Wall.wallType.ifcName) + ");\n")
     ifcPointer +=1
     returnString = "#" + str(ifcWallPointer) + ","
     for Door in Wall.listOfDoors:
@@ -333,6 +337,7 @@ def compile(buildingData):
     # Initialize File and Building Data
     f = open(filename, "w")
     global unitModifier
+    global ifcPointer
     # Set up IFC Template
     f.write(ifcTemplate)
 
@@ -342,6 +347,21 @@ def compile(buildingData):
     else:
         f.write(ifcMetric)
         unitModifier = 100.0
+
+    for type in buildingData.buildingSchedule.listOfWallTypes:
+        #297= IFCMATERIAL('Default Wall',$,'Materials');
+        f.write("#" + str(ifcPointer) + "= IFCMATERIAL('" + type.name + "',$,'Materials');\n")
+        ifcPointer +=1
+        #313= IFCMATERIALLAYER(#297,0.666666666666667,$,'Layer',$,'Materials',$);
+        f.write("#" + str(ifcPointer) + "= IFCMATERIALLAYER(#" + str(ifcPointer-1) + "," + str(type.thickness/unitModifier) + ",$,'Layer',$,'Materials',$);\n")
+        ifcPointer +=1
+        #315= IFCMATERIALLAYERSET((#313),'Basic Wall:Generic - 8"',$);
+        f.write("#" + str(ifcPointer) + "= IFCMATERIALLAYERSET((#"+ str(ifcPointer-1) + "),'" + type.name + "',$);\n")
+        ifcPointer +=1
+        #406= IFCMATERIALLAYERSETUSAGE(#315,.AXIS2.,.NEGATIVE.,0.333333333333333,$);
+        f.write("#" + str(ifcPointer) + "= IFCMATERIALLAYERSETUSAGE(#" + str(ifcPointer-1) + ",.AXIS2.,.NEGATIVE.," + str(type.thickness/(unitModifier*2)) + ",$);\n")
+        type.ifcName = ifcPointer
+        ifcPointer +=1
 
     for Story in buildingData.listOfStories:
         compileStory(f, Story)
