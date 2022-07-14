@@ -551,7 +551,7 @@ class Window:
         self.windowType = windowType
 
 # Function containing some test code
-testCode():
+def testCode():
     buildingData = BuildingData()
     #horizontal
     buildingData.appendGridline((0.0,0.0), (2000.0,0.0))
