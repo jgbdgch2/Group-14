@@ -1,5 +1,5 @@
 import numpy as np
-import ifc_compiler
+
 #import ifc_compiler.py
 
 #TODO add more comments
