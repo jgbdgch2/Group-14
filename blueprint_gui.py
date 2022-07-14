@@ -8,8 +8,35 @@ import platform
 import zipfile
 from pdf2image import convert_from_path, convert_from_bytes
 import tkinter
+import copy
 
 import building_data as bd
+
+def create_feature(info_dict, buildingData, story_id):
+    type = info_dict['-FEATURE TYPE-']
+    if type == 'Wall':
+        # make a wall object
+        wall_type = bd.WallType(1, name=info_dict['-FEATURE NAME-'],
+                                thickness=info_dict['-FEATURE WIDTH-'])
+        wall = bd.Wall(pos=(120.0, 4.0), length=info_dict['-FEATURE LENGTH-'],
+                       angle=info_dict['-FEATURE ANGLE-'], wallType=wall_type)
+        buildingData.listOfStories[story_id].append(wall)
+        return wall
+    elif type == 'Door':
+        # make a door object
+        door_type = bd.DoorType(typeNumber=1, name=info_dict['-FEATURE NAME-'],
+                    height=1.0, width=info_dict['-FEATURE WIDTH-'])
+        door = bd.Door(position=1.5, hingePos=1, doorType=door_type)
+        wall_attach = info_dict['-Wall-']
+        wall_attach.append(door)
+    elif type == 'Window':
+        # make a window object
+        window_type = bd.WindowType(typeNumber=1, name=info_dict['-FEATURE NAME-'],
+                                    height=1.0, sillHeight=1.0)
+        window = bd.Window(position=1.5, sillHeight=1.0, directionFacing=1,
+                           windowType=window_type)
+        wall_attach = info_dict['-Wall-']
+        wall_attach.append(window)
 
 def make_black(image):
     image = image.convert('RGBA')
@@ -109,11 +136,9 @@ def get_user_digit(message):
         return None
 
 def get_pdf_name():
-    filename = sg.popup_get_file('Will not see this message', no_window=True)
+    # PDF file_types does not work on macs (according to stackoverflow)
+    filename = sg.popup_get_file('Will not see this message', no_window=True, file_types=(("PDF Files", "*.pdf"),))
     if filename == '':
-        return None
-    elif(filename.lower()[-4:] != ".pdf"):
-        sg.popup("The selected file is not a PDF file!")
         return None
     else:
         return filename
@@ -137,8 +162,7 @@ def get_pdf_as_image(new_size, filename, page_num):
         if temp_image is None:
             sg.popup('Page Not Found!!')
     except Exception as E:
-        print('** Error {} **'.format(E))
-        pass        # get file popup was cancelled
+        print('** Error {} **'.format(E))# get file popup was cancelled
     os.remove(zip_folder)
     return temp_image
 
@@ -180,7 +204,6 @@ def convert_to_inches(str):
             elif char == "'":
                 is_feet = False
             elif char == '"':
-                print(len(feet))
                 if len(feet) > 0:
                     return float(''.join(feet)) * 12 + float(''.join(inches))
                 return float(''.join(inches))
@@ -226,7 +249,6 @@ def story_input_tool(name):
         values['-TOP ELEVATION-'] *= 0.393701
     else:
         values['-TOP ELEVATION-'] = convert_to_inches(values['-TOP ELEVATION-'])
-    print(values)
     return values
 
 def measure_tool_input_window(message):
@@ -283,11 +305,11 @@ def feature_input_window(feat_list, feature_name):
 def main_gui():
     # --------------------------------- Define Layout ---------------------------------
     # Right click menu for graphs
-    graph1_menu_def = ['&Right', ['Rotate', '!&Click', 'Set Distance', 'E&xit']]
-    graph2_menu_def = ['&Right', ['Delete', 'Edit', 'Insert', 'E&xit']]
+    graph1_menu_def = ['&Right', ['Rotate', 'Set Distance']]
+    graph2_menu_def = ['&Right', ['Delete', 'Edit', 'Insert', 'Toggle']]
     # First is the top menu
-    menu_def = [['&File', ['&New       Ctrl-N', '&Save      Ctrl-S', 'E&xit']],
-                ['&Edit', ['Extract Feature', '!Thing2']]]
+    menu_def = [['&File', ['&New       ALT-N', '&Save      ALT-S', 'E&xit']],
+                ['&Edit', ['Extract Feature', '!Add Story']]]
 
     # Second the window layout...2 columns
     left_col = [[sg.Text('Feature List', size=(30, 1), key='-FOLDER-')],
@@ -338,9 +360,12 @@ def main_gui():
     window.Element('-STORY LIST-').Update(visible=False)
     window.Element('-GRAPH1-').Update(visible=False)
     window.Element('-GRAPH2-').Update(visible=False)
+    window.Element('-Convert-').Update(visible=False)
 
     # --------------------------------- Add feature objects ---------------------------
+    story = 0
     buildingData = bd.BuildingData()
+    wall_objects = ('Door', 'Window')
     feature_images = {'Door':'door_right.gif', 'Wall':'wall.gif', 'Window':'window.gif'}
     available_features = ['Wall', 'Door', 'Window']
     feat_list_wall = ['Concrete', 'Wood', 'Plaster']
@@ -383,7 +408,7 @@ def main_gui():
             bound_top = bound_bottom = None
         if event in (sg.WIN_CLOSED, 'Exit'): # Closes the App
             break
-        if event == 'New       Ctrl-N': # Creates a new blueprint conversion environment
+        if event == 'New       ALT-N': # Creates a new blueprint conversion environment
             mult = 10
             new_size = 1000
             pdf_file = get_pdf_name()
@@ -430,17 +455,15 @@ def main_gui():
                 feature_name = values['-FILE LIST-'][0]
                 feature_path = os.path.join(folder, feature_images[feature_name])
             except Exception as E:
-                print('** Error {} **'.format(E))
-                pass        # something weird happened making the full filename
+                print('** Error {} **'.format(E)) # something weird happened making the full filename
         elif event == '-Convert-' and img is not None:    # There is a file to be converted
-            if not y_pixel_ratio or not x_pixel_ratio:
-                sg.popup('Pixel Ratios not set!\n\nRight click on Blueprint to use measurement tool')
-                continue
+            blueprint_2_image = copy.deepcopy(img)
             graph2 = window["-GRAPH2-"]  # type: sg.Graph
             graph2.set_size(img.size)
             graph2.change_coordinates((0,0), (img.size[0], img.size[1]))
-            graph2.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
+            blueprint_2_ID = graph2.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
             window.Element('-GRAPH2-').Update(visible=True)
+            window.Element('-Convert-').Update(visible=False)
         elif event == "-GRAPH1-":  # if there's a "Graph" event, then it's a mouse
             x, y = values["-GRAPH1-"]
             if not dragging1:
@@ -464,8 +487,11 @@ def main_gui():
                 end_point2 = (x, y)
             delta_x, delta_y = x - last2xy[0], y - last2xy[1]
             last2xy = x,y
-            select_fig = drag_figures[-1] # This will always be the figure on top
-            if select_fig == drag_figures[0]: # The bottom figure will always be the initial blueprint
+            if len(drag_figures) > 0:
+                select_fig = drag_figures[-1] # This will always be the figure on top
+            else:
+                select_fig = None
+            if blueprint_2_ID and select_fig == blueprint_2_ID: # check if initial blueprint
                 select_fig = None
             if select_fig is not None:
                 graph2.BringFigureToFront(select_fig) # when dragging a feature bring it to front of all others not selected
@@ -504,6 +530,7 @@ def main_gui():
                         graph1.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
                         window['-Hdivider-'].update('_'*int(new_size/16))
                         crop = False
+                        sg.popup('Pixel Ratios not set!\nRight click on Blueprint to use measurement\ntool and set distance')
                     else:
                         # feature selection gets sent to the feature extractor here
                         h = orig_img.size[0] / img.size[0]
@@ -562,6 +589,8 @@ def main_gui():
                                 print(y_pixel_ratio)
                         graph1.delete_figure(a_point)
                         graph1.delete_figure(b_point)
+                        if y_pixel_ratio and x_pixel_ratio:
+                            window.Element('-Convert-').Update(visible=True)
                         a_set = a_point = b_point = user_distance = None
                         set_distance = False
                 info = 'start X: {} start Y: {}\nend X: {}  end Y: {}'.format(start1_x, start1_y, x, y)
@@ -573,12 +602,13 @@ def main_gui():
                 start2_x, start2_y = start_point2
                 if not fig:
                     fig = graph2.get_figures_at_location((x,y))
-                    select_fig = fig[-1]
-                if select_fig == fig[0]: # The bottom figure will always be the initial blueprint
+                    if len(fig) > 0:
+                        select_fig = fig[-1]
+                    else:
+                        select_fig = None
+                if blueprint_2_ID and select_fig == blueprint_2_ID: # check if initial blueprint
                     select_fig = None
-                elif select_fig is None: # if the selected figure is already none then do nothing
-                    pass
-                else:
+                if select_fig:
                     # Draw the bounds around the image
                     bounds = graph2.get_bounding_box(select_fig)
                     bound_top = graph2.DrawCircle(bounds[0], 7, line_color='black', fill_color='white')
@@ -589,8 +619,11 @@ def main_gui():
         elif event.endswith('+RIGHT2+'): # Right click on graph 2
             x, y = values["-GRAPH2-"]
             fig = graph2.get_figures_at_location((x,y))
-            select_fig = fig[-1]
-            if select_fig == fig[0]: # The bottom figure will always be the initial blueprint
+            if len(fig) > 0:
+                select_fig = fig[-1]
+            else:
+                select_fig = None
+            if select_fig == blueprint_2_ID: # check if initial blueprint
                 select_fig = None
             else:
                 bounds = graph2.get_bounding_box(select_fig)
@@ -605,10 +638,10 @@ def main_gui():
                 sg.Popup('No Feature selected')
             else:
                 print('this works')
-        elif graph2 is not None and event in ('Insert', "-Feature-"):
+        elif event in ('Insert', "-Feature-") and graph2 and feature_name:
             # Get the user input for the object by creating another window
-            # Returns a dictionary of strings in list format (if a key is not used)
-            if feature_name in ('Door', 'Window') and select_fig == None:
+            # Returns a dictionary of strings (if a key is not used: in list format)
+            if feature_name in wall_objects and (not select_fig or type(feature_dict[select_fig]) != type(bd.Wall())):
                 sg.Popup('Please select a Wall for inserting Doors and windows')
                 continue
             feature_info = feature_input_window(feat_types, feature_name)
@@ -616,9 +649,13 @@ def main_gui():
                 or feature_info['-FEATURE WIDTH-'] == 0):
                 sg.Popup('Feature Length and Width Required')
                 continue
-            print(feature_info)
             if feature_info['-FEATURE ANGLE-'] == '':
-                feature_info['-FEATURE ANGLE-'] = 0
+                feature_info['-FEATURE ANGLE-'] = 0.0
+            else:
+                feature_info['-FEATURE ANGLE-'] = float(feature_info['-FEATURE ANGLE-'])
+            feature_info['-FEATURE TYPE-'] = feature_name
+            if feature_name in wall_objects:
+                feature_info['-Wall-'] = feature_dict[select_fig]
             rotate_angle = float(feature_info['-FEATURE ANGLE-'])
             new_size = feature_info['-FEATURE LENGTH-'] // x_pixel_ratio
             shape = new_size, new_size
@@ -628,18 +665,11 @@ def main_gui():
             feature = feature.rotate(rotate_angle, fillcolor=(250, 150, 50), expand=True)
             if rotate_angle % 90 != 0:
                 feature = make_transparent_edges(feature)
-            graph2 = window["-GRAPH2-"]  # type: sg.Graph
             if event == 'Insert':
                 fig_id = graph2.draw_image(data=convert_to_bytes(feature), location=(x, y))
             else:
                 fig_id = graph2.draw_image(data=convert_to_bytes(feature), location=(300, feature.size[1]))
-            new_feature = bd.DoorType(1, 'This name', 0.01, 0.01)
-            print(fig_id)
-            feature_dict[fig_id] = new_feature
-            for feat in feature_dict:
-                print(feature_dict[feat].name)
-            print(len(feature_dict))
-            #if type(element) == type(WallType()):
+            feature_dict[fig_id] = create_feature(feature_info, buildingData, story)
         elif  event == 'Rotate':
             new_size = 1000
             img = img.transpose(PIL.Image.ROTATE_90)
@@ -655,6 +685,14 @@ def main_gui():
         elif  event == 'Extract Feature' and graph2:
             sg.Popup('Select the feature to be extracted')
             extract_feature = True
+        elif  event == 'Toggle':
+            if blueprint_2_ID:
+                graph2.delete_figure(blueprint_2_ID)
+                blueprint_2_ID = None
+            else:
+                blueprint_2_ID = graph2.draw_image(data=convert_to_bytes(blueprint_2_image),
+                                                   location=(0, blueprint_2_image.size[1]))
+
     # --------------------------------- Close & Exit ---------------------------------
     window.close()
 
