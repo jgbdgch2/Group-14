@@ -127,6 +127,23 @@ def find_wall(file_name):
     cv2.imwrite('detectedLinesgray.png',gray)
     cv2.imwrite('detectedLinesedges.png',edges)
     cv2.imwrite('detectedLines.png',image)
+
+def machine_learning_feature_data_extractor(im, pixelToInches):
+    elements = []
+    bounding_boxes = stephanie_function(im)
+    for box in bounding_boxes:
+        if box.label == "wall":
+            elements.append(will_black_box(im, box.bounding, pixelToInches))
+    return elements
+
+def feature_data_extractor(im, bounding_box, pixelToInches, element_type):
+    if element_type == "Wall":
+        data = find_wall(im, bounding_box, pixelToInches)
+        return create_wall(data)
+    
+def create_wall(center, length, typ):
+    return building_data.Wall()
     
     
 find_wall("wall-with-door.png")
+
