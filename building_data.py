@@ -1,5 +1,7 @@
 import numpy as np
 import ifc_compiler
+#import ifc_compiler.py
+
 #TODO add more comments
 #TODO lookup hit should return "None" instead of -1
 
@@ -548,80 +550,82 @@ class Window:
         self.directionFacing = directionFacing
         self.windowType = windowType
 
-buildingData = BuildingData()
-#horizontal
-buildingData.appendGridline((0.0,0.0), (2000.0,0.0))
-buildingData.appendGridline((0.0,1000.0), (2000.0,1000.0))
-#vertical
-buildingData.appendGridline((0.0,0.0), (0.0,1000.0))
-buildingData.appendGridline((2000.0,0.0), (2000.0,1000.0))
-assert len(buildingData.listOfGridlines) == 4
-assert buildingData.listOfGridlines[0].cood0 == (0.0,0.0)
-assert buildingData.listOfGridlines[1].cood0 == (0.0,1000.0)
-assert buildingData.listOfGridlines[1].cood1 == (2000.0,1000.0)
+# Function containing some test code
+testCode():
+    buildingData = BuildingData()
+    #horizontal
+    buildingData.appendGridline((0.0,0.0), (2000.0,0.0))
+    buildingData.appendGridline((0.0,1000.0), (2000.0,1000.0))
+    #vertical
+    buildingData.appendGridline((0.0,0.0), (0.0,1000.0))
+    buildingData.appendGridline((2000.0,0.0), (2000.0,1000.0))
+    assert len(buildingData.listOfGridlines) == 4
+    assert buildingData.listOfGridlines[0].cood0 == (0.0,0.0)
+    assert buildingData.listOfGridlines[1].cood0 == (0.0,1000.0)
+    assert buildingData.listOfGridlines[1].cood1 == (2000.0,1000.0)
 
-#negative example
-try:
-    buildingData.appendGridline((0,0), (2000,0))
-    print("You aren't supposed to see this.")
-except:
-    3
+    #negative example
+    try:
+        buildingData.appendGridline((0,0), (2000,0))
+        print("You aren't supposed to see this.")
+    except:
+        3
 
 
-buildingData.appendElevation(0.0)
+    buildingData.appendElevation(0.0)
 
-buildingData.appendElevation(96.0)
+    buildingData.appendElevation(96.0)
 
-assert len(buildingData.listOfElevations) == 2
-assert buildingData.listOfElevations[0].height == 0.0
-assert buildingData.listOfElevations[1].height == 96.0
+    assert len(buildingData.listOfElevations) == 2
+    assert buildingData.listOfElevations[0].height == 0.0
+    assert buildingData.listOfElevations[1].height == 96.0
 
-buildingData.buildingSchedule.append(WallType(typeNumber=1, \
-                                            name="das conk creet baybee", \
-                                            thickness=8.0))
+    buildingData.buildingSchedule.append(WallType(typeNumber=1, \
+                                                name="das conk creet baybee", \
+                                                thickness=8.0))
 
-buildingData.buildingSchedule.append(DoorType(typeNumber=2, \
-                                            name="the Pearly Gates", \
-                                            height=84.0, \
-                                            width=36.0))
+    buildingData.buildingSchedule.append(DoorType(typeNumber=2, \
+                                                name="the Pearly Gates", \
+                                                height=84.0, \
+                                                width=36.0))
 
-buildingData.buildingSchedule.append(WindowType(typeNumber=3, \
-                                            name="the Pearly window", \
-                                            height=24.0, \
-                                            width=24.0, \
-                                            sillHeight=12.0))
+    buildingData.buildingSchedule.append(WindowType(typeNumber=3, \
+                                                name="the Pearly window", \
+                                                height=24.0, \
+                                                width=24.0, \
+                                                sillHeight=12.0))
 
-buildingData.appendStory(bottomElevation = buildingData.listOfElevations[0], \
-                        topElevation = buildingData.listOfElevations[1])
+    buildingData.appendStory(bottomElevation = buildingData.listOfElevations[0], \
+                            topElevation = buildingData.listOfElevations[1])
 
-buildingData.listOfStories[0].updateTopElevation(120.0)
+    buildingData.listOfStories[0].updateTopElevation(120.0)
 
-assert buildingData.listOfStories[0].getTopElevation().getHeight() == 120.0
+    assert buildingData.listOfStories[0].getTopElevation().getHeight() == 120.0
 
-#South wall
-buildingData.listOfStories[0].append(Wall(pos=(120.0, 4.0), length=240.0, angle=0.0,\
-                                        wallType=buildingData.buildingSchedule.searchByType(1)))
+    #South wall
+    buildingData.listOfStories[0].append(Wall(pos=(120.0, 4.0), length=240.0, angle=0.0,\
+                                            wallType=buildingData.buildingSchedule.searchByType(1)))
 
-#East wall
-buildingData.listOfStories[0].append(Wall(pos=(4.0, 120.0), length=240.0, angle=90.0,\
-                                        wallType=buildingData.buildingSchedule.searchByType(1)))
+    #East wall
+    buildingData.listOfStories[0].append(Wall(pos=(4.0, 120.0), length=240.0, angle=90.0,\
+                                            wallType=buildingData.buildingSchedule.searchByType(1)))
 
-#North wall
-buildingData.listOfStories[0].append(Wall(pos=(236.0, 120.0), length=240.0, angle=90.0,\
-                                        wallType=buildingData.buildingSchedule.searchByType(1)))
+    #North wall
+    buildingData.listOfStories[0].append(Wall(pos=(236.0, 120.0), length=240.0, angle=90.0,\
+                                            wallType=buildingData.buildingSchedule.searchByType(1)))
 
-#West wall
-buildingData.listOfStories[0].append(Wall(pos=(120.0, 236.0), length=240.0, angle=0.0, \
-                                        wallType=buildingData.buildingSchedule.searchByType(1)))
+    #West wall
+    buildingData.listOfStories[0].append(Wall(pos=(120.0, 236.0), length=240.0, angle=0.0, \
+                                            wallType=buildingData.buildingSchedule.searchByType(1)))
 
-buildingData.listOfStories[0].listOfWalls[0].append(Door(position = 20.0, hingePos = 1, doorType = buildingData.buildingSchedule.searchByType(2)))
+    buildingData.listOfStories[0].listOfWalls[0].append(Door(position = 20.0, hingePos = 1, doorType = buildingData.buildingSchedule.searchByType(2)))
 
-buildingData.listOfStories[0].listOfWalls[0].append(Window(position = -40.0, directionFacing = 0, windowType = buildingData.buildingSchedule.searchByType(3)))
+    buildingData.listOfStories[0].listOfWalls[0].append(Window(position = -40.0, directionFacing = 0, windowType = buildingData.buildingSchedule.searchByType(3)))
 
-buildingData.findWallJoinsHelper()
-for join in buildingData.listOfStories[0].listOfWallJoins:
-    print(join[0].getPos(), join[1].getPos())
+    buildingData.findWallJoinsHelper()
+    for join in buildingData.listOfStories[0].listOfWallJoins:
+        print(join[0].getPos(), join[1].getPos())
 
-ifc_compiler.compile(buildingData)
+    #ifc_compiler.compile(buildingData)
 
-print("done!")
+    print("done!")
