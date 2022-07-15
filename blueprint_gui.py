@@ -302,6 +302,38 @@ def feature_input_window(feat_list, feature_name):
         values['-FEATURE WIDTH-'] = convert_to_inches(values['-FEATURE WIDTH-'])
     return values
 
+def get_window_settings(settings):
+    layout = [[sg.Text('Window Width Percent:', size =(20, 1))],
+              [sg.Slider(range=(0, 100), default_value=settings[0]*100, size=(50, 10), orientation="h",
+                         enable_events=True, key='-WIDTH PERCENT-')],
+              [sg.Text('Window Height Percent:', size =(20, 1))],
+              [sg.Slider(range=(0, 100), default_value=settings[1]*100, size=(50, 10), orientation="h",
+                         enable_events=True, key='-HEIGHT PERCENT-')],
+              [sg.Text('Blueprint Scaling (Only applied when importing):', size =(50, 1))],
+              [sg.Slider(range=(0, 200), default_value=settings[2]*100, size=(50, 10), orientation="h",
+                         enable_events=True, key='-IMAGE WINDOW PERCENT-')],
+              [sg.Text('Blueprint Import Resolution (Only applied when importing):', size =(50, 1))],
+              [sg.Slider(range=(0, 10000), default_value=settings[3], size=(50, 10), orientation="h",
+                         enable_events=True, key='-IMAGE RESOLUTION-')],
+              [sg.Submit(bind_return_key=True), sg.Cancel()]]
+
+    window = sg.Window('Window Settings', layout)
+    while True:
+        event, values = window.read()
+        if event in (sg.WIN_CLOSED, 'Exit', 'Cancel'):
+            window.close()
+            return None
+        elif event == 'Submit':
+            break
+
+    window.close()
+    values['-WIDTH PERCENT-']        = values['-WIDTH PERCENT-'] / 100
+    values['-HEIGHT PERCENT-']       = values['-HEIGHT PERCENT-'] / 100
+    values['-IMAGE WINDOW PERCENT-'] = values['-IMAGE WINDOW PERCENT-'] / 100
+    values['-IMAGE RESOLUTION-']     = int(values['-IMAGE RESOLUTION-'])
+
+    return values
+
 def main_gui():
     # --------------------------------- Define Layout ---------------------------------
     # Right click menu for graphs
@@ -309,14 +341,16 @@ def main_gui():
     graph2_menu_def = ['&Right', ['Delete', 'Edit', 'Insert', 'Toggle']]
     # First is the top menu
     menu_def = [['&File', ['&New       ALT-N', '&Save      ALT-S', 'E&xit']],
-                ['&Edit', ['Extract Feature', '!Add Story']]]
+                ['&Edit', ['Extract Feature', '!Add Story']],
+                ['Se&ttings', ['&Window Settings', '!Help']]]
 
     # Second the window layout...2 columns
     left_col = [[sg.Text('Feature List', size=(30, 1), key='-FOLDER-')],
                 [sg.Listbox(values=[], enable_events=True, size=(30,20),key='-FILE LIST-')],# This creates a listbox for the images in the folder
                 [sg.Button('add feature', key='-Feature-')], # This allows the features to be added to the converted blueprint
                 [sg.Button('Convert', key='-Convert-')],
-                [sg.Listbox(values=[], enable_events=True, size=(30,10),key='-STORY LIST-')]]
+                [sg.Listbox(values=[], enable_events=True, size=(30,10),key='-STORY LIST-')],
+                [sg.Button('Export .ifc', key='-EXPORT IFC-')]]
 
     # Creates the column for the image
     images_col = [[sg.Push(), sg.Text('Open a new project', key='-TOUT-'), sg.Push()],
@@ -329,7 +363,7 @@ def main_gui():
                       right_click_menu=graph1_menu_def,
                       background_color='white',
                       drag_submits=True)],
-                  [sg.Text('_'*60, key='-Hdivider-')],
+                 # [sg.Text('_'*60, key='-Hdivider-')],
                   [sg.Graph(
                       canvas_size=(0, 0),
                       graph_bottom_left=(0, 0),
@@ -353,7 +387,7 @@ def main_gui():
     window_width = root.winfo_screenwidth()
     window_height = root.winfo_screenheight()
     root.destroy()
-    print('{}\n{}'.format(window_width, window_height))
+    # print('{}\n{}'.format(window_width, window_height))
     # --------------------------------- Create Window ---------------------------------
     window = sg.Window('Blueprint Conversion', layout, resizable=False).finalize()
     window.Maximize()
@@ -361,6 +395,7 @@ def main_gui():
     window.Element('-GRAPH1-').Update(visible=False)
     window.Element('-GRAPH2-').Update(visible=False)
     window.Element('-Convert-').Update(visible=False)
+    window.Element('-EXPORT IFC-').Update(visible=False)
 
     # --------------------------------- Add feature objects ---------------------------
     story = 0
@@ -386,17 +421,23 @@ def main_gui():
     window['-FILE LIST-'].update(available_features) # door_right.gif
 
     # ----- Run the Event Loop -----
-    dragging1 = dragging2 = crop = set_distance = extract_feature = False
     graph1 = window["-GRAPH1-"]
     #help(graph1)
     #exit(0)
     graph1.bind('<Button-3>', '+RIGHT1+')
     graph2 = window["-GRAPH2-"]
     graph2.bind('<Button-3>', '+RIGHT2+')
+    # --------------------------------- Initialize Variables------------------------
+    width_percent = 0.88            # What percent of the window width is graph
+    height_percent = 0.94           # What percent of the window height is graph
+    image_window_percent = 1.10     # Image scaling
+    image_resolution = 10000        # Blueprint original resolution
+    window_size = (window_width * width_percent, window_height * height_percent)
+    dragging1 = dragging2 = crop = set_distance = extract_feature = False
     start_point = end_point = filename = feature_name = select_fig = img = None
     orig_img = a_set = bound_top = bound_bottom = fig = a_point = y_pixel_ratio = None
     x_pixel_ratio = feature_path = user_distance = prior_rect = start_point1 = None
-    end_point1 = graph2 = None
+    end_point1 = graph2 = start_point2 = None
     feature_dict = {}
     # --------------------------------- Event Loop ---------------------------------
     while True:
@@ -409,8 +450,8 @@ def main_gui():
         if event in (sg.WIN_CLOSED, 'Exit'): # Closes the App
             break
         if event == 'New       ALT-N': # Creates a new blueprint conversion environment
-            mult = 10
-            new_size = 1000
+            new_size = int(window_size[1] * image_window_percent)
+            mult = image_resolution // new_size
             pdf_file = get_pdf_name()
             if pdf_file:
                 page_num = get_user_digit('Enter Blueprint Page Number:')
@@ -442,10 +483,9 @@ def main_gui():
                 img = resize_img(orig_img, (new_size, new_size))
                 graph1 = window["-GRAPH1-"]  # type: sg.Graph
                 graph1.erase()
-                graph1.set_size(img.size)
-                graph1.change_coordinates((0,0), (img.size[0], img.size[1]))
+                graph1.set_size(window_size)
+                graph1.change_coordinates((0,0), window_size)
                 graph1.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
-                window['-Hdivider-'].update('_'*int(new_size/16))
                 window['-TOUT-'].update(visible=False)
                 window.Element('-GRAPH1-').Update(visible=True)
                 sg.popup('Select the area of interest.')
@@ -459,11 +499,16 @@ def main_gui():
         elif event == '-Convert-' and img is not None:    # There is a file to be converted
             blueprint_2_image = copy.deepcopy(img)
             graph2 = window["-GRAPH2-"]  # type: sg.Graph
-            graph2.set_size(img.size)
-            graph2.change_coordinates((0,0), (img.size[0], img.size[1]))
+            graph2.set_size(window_size)
+            graph2.change_coordinates((0,0), window_size)
+            horz_center = (window_size[1] - img.size[1]) // 2
             blueprint_2_ID = graph2.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
+            graph1.set_size((0,0)) # This will free up the space for graph2
+            window.refresh() # This must be refreshed before making anything invisible
+            window.Element('-GRAPH1-').Update(visible=False)
             window.Element('-GRAPH2-').Update(visible=True)
             window.Element('-Convert-').Update(visible=False)
+            window.Element('-EXPORT IFC-').Update(visible=True)
         elif event == "-GRAPH1-":  # if there's a "Graph" event, then it's a mouse
             x, y = values["-GRAPH1-"]
             if not dragging1:
@@ -515,7 +560,6 @@ def main_gui():
                     else:
                         bottom = img.size[1] - start1_y
                         top = img.size[1] - y
-                    new_size = 1000
                     graph1 = window["-GRAPH1-"]  # type: sg.Graph
                     if sg.popup_ok_cancel('Area selected\nPress Cancel to redraw') != 'OK':
                         graph1.delete_figure(prior_rect)
@@ -525,12 +569,19 @@ def main_gui():
                         orig_img = orig_img.crop((left*mult, top*mult, right*mult, bottom*mult))
                         img = resize_img(orig_img, (new_size, new_size))
                         graph1.erase()
-                        graph1.set_size(img.size)
-                        graph1.change_coordinates((0,0), (img.size[0], img.size[1]))
+                        graph1.set_size(window_size)
+                        graph1.change_coordinates((0,0), window_size)
+                        '''
+                        horz_center = 0
+                        vert_center = 0
+                        if window_size[0] > img.size[0] and window_size[1] > img.size[1]:
+                            horz_center = (window_size[1] - img.size[1]) // 2
+                            vert_center = (window_size[0] - img.size[0]) // 2
+                            graph1.draw_image(data=convert_to_bytes(img), location=(vert_center, img.size[1] + horz_center))
+                        '''
                         graph1.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
-                        window['-Hdivider-'].update('_'*int(new_size/16))
                         crop = False
-                        sg.popup('Pixel Ratios not set!\nRight click on Blueprint to use measurement\ntool and set distance')
+                        sg.popup('Pixel Ratios not set!\nRight click on Blueprint to use measurement  \ntool and set distance')
                     else:
                         # feature selection gets sent to the feature extractor here
                         h = orig_img.size[0] / img.size[0]
@@ -556,6 +607,11 @@ def main_gui():
                         else:
                             print('Extract Feature')
                         graph1.delete_figure(prior_rect)
+                        graph1.set_size((0,0)) # This will free up the space for graph2
+                        graph2.set_size(window_size)
+                        window.refresh() # This must be refreshed before making anything invisible
+                        window.Element('-GRAPH1-').Update(visible=False)
+                        window.Element('-GRAPH2-').Update(visible=True)
                         extract_feature = False
                 elif set_distance:
                     if not a_set:
@@ -657,9 +713,9 @@ def main_gui():
             if feature_name in wall_objects:
                 feature_info['-Wall-'] = feature_dict[select_fig]
             rotate_angle = float(feature_info['-FEATURE ANGLE-'])
-            new_size = feature_info['-FEATURE LENGTH-'] // x_pixel_ratio
-            shape = new_size, new_size
-            image_in = image_formating(feature_path, resize=(shape))
+            feature_size = int(feature_info['-FEATURE LENGTH-'] * x_pixel_ratio)
+            shape = feature_size, feature_size
+            image_in = image_formating(feature_path, resize=shape)
             feature = resize_img(image_in, shape)
             feature = make_black(feature)
             feature = feature.rotate(rotate_angle, fillcolor=(250, 150, 50), expand=True)
@@ -670,20 +726,27 @@ def main_gui():
             else:
                 fig_id = graph2.draw_image(data=convert_to_bytes(feature), location=(300, feature.size[1]))
             feature_dict[fig_id] = create_feature(feature_info, buildingData, story)
-        elif  event == 'Rotate':
-            new_size = 1000
+        elif  event == 'Rotate' and not graph2 and not crop:
             img = img.transpose(PIL.Image.ROTATE_90)
             graph1 = window["-GRAPH1-"]  # type: sg.Graph
             graph1.erase()
-            graph1.set_size(img.size)
-            graph1.change_coordinates((0,0), (img.size[0], img.size[1]))
+            graph1.set_size(window_size)
+            graph1.change_coordinates((0,0), window_size)
             graph1.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
-            window['-Hdivider-'].update('_'*int(new_size/16))
         elif  event == 'Set Distance':
+            if crop:
+                sg.Popup('Area of interest not selected!')
+                continue
             set_distance = True
             sg.Popup('Select point A')
         elif  event == 'Extract Feature' and graph2:
+            graph2.set_size((0,0)) # This will free up the space for graph2
+            graph1.set_size(window_size)
+            window.refresh() # This must be refreshed before making anything invisible
+            window.Element('-GRAPH1-').Update(visible=True)
+            window.Element('-GRAPH2-').Update(visible=False)
             sg.Popup('Select the feature to be extracted')
+
             extract_feature = True
         elif  event == 'Toggle':
             if blueprint_2_ID:
@@ -692,6 +755,23 @@ def main_gui():
             else:
                 blueprint_2_ID = graph2.draw_image(data=convert_to_bytes(blueprint_2_image),
                                                    location=(0, blueprint_2_image.size[1]))
+                graph2.send_figure_to_back(blueprint_2_ID)
+        elif  event == 'Window Settings':
+            if graph2:
+                sg.Popup('Window Settings cannot be changed after using the Convert tool')
+                continue
+            window_settings = [width_percent, height_percent, image_window_percent, image_resolution]
+            window_settings = get_window_settings(window_settings)
+
+            if not window_settings:
+                continue
+
+            width_percent = window_settings['-WIDTH PERCENT-']
+            height_percent = window_settings['-HEIGHT PERCENT-']
+            image_window_percent = window_settings['-IMAGE WINDOW PERCENT-']
+            image_resolution = window_settings['-IMAGE RESOLUTION-']
+            window_size = (window_width * width_percent, window_height * height_percent)
+
 
     # --------------------------------- Close & Exit ---------------------------------
     window.close()
