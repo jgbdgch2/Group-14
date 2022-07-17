@@ -628,4 +628,4 @@ def testCode():
 
     #ifc_compiler.compile(buildingData)
 
-    print("done!")
+    return buildingData
