@@ -11,6 +11,7 @@ import tkinter
 import copy
 
 import building_data as bd
+import ifc_compiler as ifc
 
 def create_feature(info_dict, buildingData, story_id):
     type = info_dict['-FEATURE TYPE-']
@@ -134,6 +135,45 @@ def get_user_digit(message):
     else:
         sg.Popup('Page Number Required!')
         return None
+
+def get_folder_name(name):
+    if '\\' in name:
+        folder = name.split('\\')
+    else:
+        folder = name.split('/')
+    return folder[-1]
+
+def get_file_name(test_name=''):
+    folder = os.getcwd()
+    layout = [[sg.Text('Folder:', size =(6, 1)),
+               sg.Text(get_folder_name(folder), size =(60, 1), key='-NAME-')],
+              [sg.Text('File Name:', size =(10, 1)), sg.Input(test_name, key='-FILE NAME-'),
+               sg.Text('.ifc', size =(4, 1)), sg.FolderBrowse(target='-FOLDER NAME-')],
+              [sg.Input(key='-FOLDER NAME-', enable_events=True, visible=False)], # This allows for events on folder browse!!
+              [sg.Submit(bind_return_key=True), sg.Cancel()]]
+
+    window = sg.Window('Export IFC File', layout).finalize()
+
+    while True:
+        event, values = window.read()
+        if event in (sg.WIN_CLOSED, 'Exit', 'Cancel') or event == None:
+            window.close()
+            return None
+        elif event == 'Submit':
+            break
+        elif event == '-FOLDER NAME-':
+            folder = values['-FOLDER NAME-']
+            window['-NAME-'].update(get_folder_name(values['-FOLDER NAME-']))
+            window.refresh()
+
+    window.close()
+    folder = folder.replace('/', '\\')
+    file = values['-FILE NAME-']
+    if event in (sg.WIN_CLOSED, 'Exit', 'Cancel') or file == None or file == '':
+        return None
+    elif not file.endswith('.ifc'):
+        values['-FILE NAME-'] = file + '.ifc'
+    return os.path.join(folder, values['-FILE NAME-'])
 
 def get_pdf_name():
     # PDF file_types does not work on macs (according to stackoverflow)
@@ -395,7 +435,7 @@ def main_gui():
     window.Element('-GRAPH1-').Update(visible=False)
     window.Element('-GRAPH2-').Update(visible=False)
     window.Element('-Convert-').Update(visible=False)
-    window.Element('-EXPORT IFC-').Update(visible=False)
+    #window.Element('-EXPORT IFC-').Update(visible=False)
 
     # --------------------------------- Add feature objects ---------------------------
     story = 0
@@ -428,10 +468,12 @@ def main_gui():
     graph2 = window["-GRAPH2-"]
     graph2.bind('<Button-3>', '+RIGHT2+')
     # --------------------------------- Initialize Variables------------------------
-    width_percent = 0.88            # What percent of the window width is graph
+    width_percent = 0.84            # What percent of the window width is graph
     height_percent = 0.94           # What percent of the window height is graph
-    image_window_percent = 1.10     # Image scaling
+    image_window_percent = 1.20     # Image scaling
     image_resolution = 10000        # Blueprint original resolution
+    if sg.user_settings_file_exists():
+        print('These settings')
     window_size = (window_width * width_percent, window_height * height_percent)
     dragging1 = dragging2 = crop = set_distance = extract_feature = False
     start_point = end_point = filename = feature_name = select_fig = img = None
@@ -772,6 +814,27 @@ def main_gui():
             image_resolution = window_settings['-IMAGE RESOLUTION-']
             window_size = (window_width * width_percent, window_height * height_percent)
 
+            if graph1:
+                graph1.set_size(window_size)
+                graph1.change_coordinates((0,0), window_size)
+                window.refresh()
+                a_set = a_point = b_point = user_distance = None
+                y_pixel_ratio = x_pixel_ratio = None
+
+        elif  event == '-EXPORT IFC-':
+            # TODO Check for buildingData completeness
+            # if
+            save_file = get_file_name()
+            buildingData = bd.testCode()
+            window.perform_long_operation(lambda :
+                              ifc.compile(buildingData, save_file),
+                              '-EXPORT-')
+        elif  event == '-EXPORT-':
+            success = values[event]
+            if success:
+                sg.Popup('Successfully Exported!')
+                continue
+            sg.Popup('Export Failed!')
 
     # --------------------------------- Close & Exit ---------------------------------
     window.close()
