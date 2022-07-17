@@ -2,7 +2,6 @@ import uuid
 import string
 import math
 
-# TODO ensure output file goes to correct location
 filename = "default_filename.ifc"
 
 # Initialize pointer to track location in IFC file
@@ -221,7 +220,7 @@ def compileWindow(f, Window, Wall, ifcWallPointer, storyLocalPlacement):
     f.write("#" + str(ifcPointer) + "= IFCLOCALPLACEMENT(#" + str(storyLocalPlacement) + ",#" + str(ifcPointer-1) + ");\n")
     ifcPointer +=1
     #1927= IFCWINDOW('1egRXnmeDArvJcnh5AE0Rg',$,$,$,$,#26299,#1920,'288433',3.83333333333332,2.5,.WINDOW.,.NOTDEFINED.,$);
-    f.write("#" + str(ifcPointer) + "= IFCWINDOW('" + getGUID() + "',$,$,$,$,#" + str(ifcPointer-1) + ",#" + str(shapeDef) + ",$,"\
+    f.write("#" + str(ifcPointer) + "= IFCWINDOW('" + getGUID() + "',$,'" + Window.windowType.name + "',$,$,#" + str(ifcPointer-1) + ",#" + str(shapeDef) + ",$,"\
         + str(Window.windowType.height/unitModifier) + "," + str(Window.windowType.width/unitModifier) + ",.WINDOW.,.NOTDEFINED.,$);\n")
     ifcWindowPointer = ifcPointer
     ifcPointer +=1
@@ -269,7 +268,7 @@ def compileDoor(f, Door, Wall, ifcWallPointer, storyLocalPlacement):
     f.write("#" + str(ifcPointer) + "= IFCLOCALPLACEMENT(#" + str(storyLocalPlacement) + ",#" + str(ifcPointer-1) + ");\n")
     ifcPointer +=1
     #474= IFCDOOR('0DzNJ20FL0ZQlbjVf8770P',#42,'Single-Flush:36" x 84":285019',$,'Single-Flush:36" x 84"',#636,#467,'285019',7.,3.,.DOOR.,.NOTDEFINED.,$);
-    f.write("#" + str(ifcPointer) + "= IFCDOOR('" + getGUID() + "',$,$,$,$,#" + str(ifcPointer-1) + ",#" + str(shapeDef) + ",$,"\
+    f.write("#" + str(ifcPointer) + "= IFCDOOR('" + getGUID() + "',$,'" + Door.doorType.name + "',$,$,#" + str(ifcPointer-1) + ",#" + str(shapeDef) + ",$,"\
         + str(Door.doorType.height/unitModifier) + "," + str(Door.doorType.width/unitModifier) + ",.DOOR.,.NOTDEFINED.,$);\n")
     ifcDoorPointer = ifcPointer
     ifcPointer +=1
@@ -282,13 +281,11 @@ def compileDoor(f, Door, Wall, ifcWallPointer, storyLocalPlacement):
     returnString = "#" + str(ifcDoorPointer) + ","
     return returnString
 
-# TODO: Assign Cross Section Properties to Walls
-# TODO: Connect Walls to Eachother
 def compileWall(f, Wall, storyLocalPlacement):
     global ifcPointer
     printVerticalShapeDef(f, getWallCoords(Wall), 8.0)
     #221= IFCWALL('1btdOju4n3KfkQnsDbRkrg', $, $, $, $, #storyLocalPlacement, #220, '2712', .NOTDEFINED.);
-    f.write("#" + str(ifcPointer) + "= IFCWALL('" + getGUID() + "', $, $, $, $, #" + str(storyLocalPlacement) + ", #" + str(ifcPointer-1) + ", $, .NOTDEFINED.);\n")
+    f.write("#" + str(ifcPointer) + "= IFCWALL('" + getGUID() + "', $, '" + Wall.wallType.name + "', $, $, #" + str(storyLocalPlacement) + ", #" + str(ifcPointer-1) + ", $, .NOTDEFINED.);\n")
     ifcWallPointer = ifcPointer
     Wall.ifcName = "#" + str(ifcWallPointer)
     ifcPointer +=1
@@ -302,18 +299,17 @@ def compileWall(f, Wall, storyLocalPlacement):
         returnString = returnString + compileWindow(f, Window, Wall, ifcWallPointer, storyLocalPlacement)
     return returnString
 
-def compileStory(f, Story):
-    # Placeholder Variables
-    PLACEHOLDER_ELEVATION = 0.0
-
+def compileStory(f, Story, storyNumber):
     global ifcPointer
     storyPointer = ifcPointer;
     storyLocalPlacement = ifcPointer+3;
     storyElements = ""
 
-    f.write("#" + str(ifcPointer) + "= IFCBUILDINGSTOREY('" + getGUID() + "',$,'Level 1',$,'Level:Level 1',#" + str(storyLocalPlacement) + ",$,'Level 1',.ELEMENT.,0.);\n")
+    # Declare bottom elevation of the story where all the elements are listed
+    f.write("#" + str(ifcPointer) + "= IFCBUILDINGSTOREY('" + getGUID() + "',$,'Story " + str(storyNumber) + \
+    " Base',$,$,#" + str(storyLocalPlacement) + ",$,'Story " + str(storyNumber) + " Base',.ELEMENT.," + str(Story.bottomElevation.height) + ");\n")
     ifcPointer +=1
-    f.write("#" + str(ifcPointer) + "= IFCCARTESIANPOINT((0.,0.,"+ str(PLACEHOLDER_ELEVATION) + "));\n")
+    f.write("#" + str(ifcPointer) + "= IFCCARTESIANPOINT((0.,0.,"+ str(Story.bottomElevation.height) + "));\n")
     ifcPointer +=1
     f.write("#" + str(ifcPointer) + "= IFCAXIS2PLACEMENT3D(#" + str(ifcPointer-1) + ",$,$);\n")
     ifcPointer +=1
@@ -333,7 +329,7 @@ def compileStory(f, Story):
 
 # Main Function Call
 # buildingData is the data to be placed in the IFC
-def compile(buildingData):
+def compile(buildingData, filename):
     # Initialize File and Building Data
     f = open(filename, "w")
     global unitModifier
@@ -363,10 +359,13 @@ def compile(buildingData):
         type.ifcName = ifcPointer
         ifcPointer +=1
 
+    i = 0
     for Story in buildingData.listOfStories:
-        compileStory(f, Story)
+        i += 1
+        compileStory(f, Story, i)
 
     # Add closing lines to IFC file
     f.write(ifcCloser)
     # Close IFC File, end of function
     f.close()
+    return True
