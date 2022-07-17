@@ -329,7 +329,7 @@ def compileStory(f, Story, storyNumber):
 
 # Main Function Call
 # buildingData is the data to be placed in the IFC
-def compile(buildingData):
+def compile(buildingData, filename):
     # Initialize File and Building Data
     f = open(filename, "w")
     global unitModifier
@@ -368,3 +368,4 @@ def compile(buildingData):
     f.write(ifcCloser)
     # Close IFC File, end of function
     f.close()
+    return True
