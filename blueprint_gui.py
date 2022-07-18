@@ -226,8 +226,6 @@ def get_pdf_as_image(new_size, filename, page_num):
                     temp_image = image_formating(png_folder, resize=(new_size, new_size))
                     os.remove(png_folder)
                     break
-        if temp_image is None:
-            popup_info('Page Not Found!!')
     except Exception as E:
         print('** Error {} **'.format(E))# get file popup was cancelled
     os.remove(zip_folder)
@@ -537,7 +535,7 @@ def main_gui():
                         story_info = story_input_tool(story_info['-STORY NAME-'])
                 buildingData.appendStory(bottomElevation = bd.Elevation(story_info['-BOTTOM ELEVATION-']), \
                                         topElevation = bd.Elevation(story_info['-TOP ELEVATION-']))
-                popup_info('Blueprint is loading...')
+                popup_info('Searching for Blueprint...')
                 start_point = end_point = filename = feature_name = select_fig = img = None
                 orig_img = a_set = bound_top = bound_bottom = fig = a_point = y_pixel_ratio = None
                 x_pixel_ratio = feature_path = user_distance = prior_rect = start_point1 = None
@@ -548,17 +546,19 @@ def main_gui():
                 graph2 = None
                 window.Element('-GRAPH2-').Update(visible=False)
             orig_img = values[event]
-            if orig_img:
-                img = resize_img(orig_img, (new_size, new_size))
-                graph1 = window["-GRAPH1-"]  # type: sg.Graph
-                graph1.erase()
-                graph1.set_size(window_size)
-                graph1.change_coordinates((0,0), window_size)
-                graph1.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
-                window['-TOUT-'].update(visible=False)
-                window.Element('-GRAPH1-').Update(visible=True)
-                popup_info('Select the area of interest.')
-                crop = True
+            if not orig_img:
+                popup_info('Page Not Found!')
+                continue
+            img = resize_img(orig_img, (new_size, new_size))
+            graph1 = window["-GRAPH1-"]  # type: sg.Graph
+            graph1.erase()
+            graph1.set_size(window_size)
+            graph1.change_coordinates((0,0), window_size)
+            graph1.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
+            window['-TOUT-'].update(visible=False)
+            window.Element('-GRAPH1-').Update(visible=True)
+            popup_info('Select the area of interest.')
+            crop = True
         elif event == '-FILE LIST-':    # A file was chosen from the listbox
             try:
                 feature_name = values['-FILE LIST-'][0]
