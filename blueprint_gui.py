@@ -133,7 +133,7 @@ def get_user_digit(message):
     if page_num != '' and page_num.isdigit():
         return int(page_num)
     else:
-        sg.Popup('Page Number Required!')
+        popup_info('Page Number Required!')
         return None
 
 def get_folder_name(name):
@@ -175,6 +175,33 @@ def get_file_name(test_name=''):
         values['-FILE NAME-'] = file + '.ifc'
     return os.path.join(folder, values['-FILE NAME-'])
 
+def popup_info(info):
+    count = 0
+    max = 0
+    max_width = 75
+    min_width = 20
+    for char in info:
+        if char != '\n':
+            count += 1
+            if count > max:
+                max = count
+        else:
+            count = 0
+    wide = max
+    if wide > max_width:
+        wide = max_width
+    if wide < min_width:
+        wide = min_width
+    long = len(info) // max_width
+    long += 1 + info.count('\n')
+    layout = [[sg.Text(info, size =(wide, long))],
+              [sg.Button(' OK ')]]
+
+    window = sg.Window('Window', layout, element_justification='c',
+                       return_keyboard_events=True).finalize()
+    event, values = window.read()
+    window.close()
+
 def get_pdf_name():
     # PDF file_types does not work on macs (according to stackoverflow)
     filename = sg.popup_get_file('Will not see this message', no_window=True, file_types=(("PDF Files", "*.pdf"),))
@@ -200,7 +227,7 @@ def get_pdf_as_image(new_size, filename, page_num):
                     os.remove(png_folder)
                     break
         if temp_image is None:
-            sg.popup('Page Not Found!!')
+            popup_info('Page Not Found!!')
     except Exception as E:
         print('** Error {} **'.format(E))# get file popup was cancelled
     os.remove(zip_folder)
@@ -504,13 +531,13 @@ def main_gui():
                 story_info = story_input_tool('First Floor')
                 while not story_info or story_info['-BOTTOM ELEVATION-'] >= story_info['-TOP ELEVATION-']:
                     if story_info == None:
-                        sg.Popup('Story Information must be correctly added')
+                        popup_info('Story Information must be correctly added')
                         story_info = story_input_tool('First Floor')
                     else:
                         story_info = story_input_tool(story_info['-STORY NAME-'])
                 buildingData.appendStory(bottomElevation = bd.Elevation(story_info['-BOTTOM ELEVATION-']), \
                                         topElevation = bd.Elevation(story_info['-TOP ELEVATION-']))
-                sg.Popup('Blueprint is loading...')
+                popup_info('Blueprint is loading...')
                 start_point = end_point = filename = feature_name = select_fig = img = None
                 orig_img = a_set = bound_top = bound_bottom = fig = a_point = y_pixel_ratio = None
                 x_pixel_ratio = feature_path = user_distance = prior_rect = start_point1 = None
@@ -530,7 +557,7 @@ def main_gui():
                 graph1.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
                 window['-TOUT-'].update(visible=False)
                 window.Element('-GRAPH1-').Update(visible=True)
-                sg.popup('Select the area of interest.')
+                popup_info('Select the area of interest.')
                 crop = True
         elif event == '-FILE LIST-':    # A file was chosen from the listbox
             try:
@@ -623,7 +650,7 @@ def main_gui():
                         '''
                         graph1.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
                         crop = False
-                        sg.popup('Pixel Ratios not set!\nRight click on Blueprint to use measurement  \ntool and set distance')
+                        popup_info('Pixel Ratios not set!\nRight click on Blueprint to use measurement  \ntool and set distance')
                     else:
                         # feature selection gets sent to the feature extractor here
                         h = orig_img.size[0] / img.size[0]
@@ -645,7 +672,7 @@ def main_gui():
                         graph1.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
                         '''
                         if not feature_info:
-                            sg.Popup('Feature information required for feature extraction')
+                            popup_info('Feature information required for feature extraction')
                         else:
                             print('Extract Feature')
                         graph1.delete_figure(prior_rect)
@@ -659,7 +686,7 @@ def main_gui():
                     if not a_set:
                         a_set = end_point1
                         a_point = graph1.DrawCircle(a_set, 4, line_color='black', fill_color='white')
-                        sg.Popup('Select point B')
+                        popup_info('Select point B')
                     else:
                         x_distance, y_distance = end_point1[0] - a_set[0], end_point1[1] - a_set[1]
                         b_point = graph1.DrawCircle(end_point1, 4, line_color='black', fill_color='white')
@@ -674,7 +701,7 @@ def main_gui():
                                     break
                             if user_distance:
                                 x_pixel_ratio = x_distance / user_distance['-TOOL LENGTH-']
-                                sg.Popup('x-axis set')
+                                popup_info('x-axis set')
                                 print(x_pixel_ratio)
                         else:
                             while not user_distance or user_distance['-TOOL LENGTH-'] == 0:
@@ -683,7 +710,7 @@ def main_gui():
                                     break
                             if user_distance:
                                 y_pixel_ratio = y_distance / user_distance['-TOOL LENGTH-']
-                                sg.Popup('y-axis set')
+                                popup_info('y-axis set')
                                 print(y_pixel_ratio)
                         graph1.delete_figure(a_point)
                         graph1.delete_figure(b_point)
@@ -692,7 +719,7 @@ def main_gui():
                         a_set = a_point = b_point = user_distance = None
                         set_distance = False
                 info = 'start X: {} start Y: {}\nend X: {}  end Y: {}'.format(start1_x, start1_y, x, y)
-                # sg.popup('Dragging Done!\n{}'.format(info)) # This line can be used for trouble shooting mouse positions
+                # popup_info('Dragging Done!\n{}'.format(info)) # This line can be used for trouble shooting mouse positions
                 dragging1 = False
             else:
                 x, y = values["-GRAPH2-"]
@@ -712,7 +739,7 @@ def main_gui():
                     bound_top = graph2.DrawCircle(bounds[0], 7, line_color='black', fill_color='white')
                     bound_bottom = graph2.DrawCircle(bounds[1], 7, line_color='black', fill_color='white')
                 info = 'start X: {} start Y: {}\nend X: {}  end Y: {}'.format(start2_x, start2_y, x, y)
-                # sg.popup('Dragging Done!\n{}'.format(info)) # This line can be used for trouble shooting mouse positions
+                # popup_info('Dragging Done!\n{}'.format(info)) # This line can be used for trouble shooting mouse positions
                 dragging2 = False
         elif event.endswith('+RIGHT2+'): # Right click on graph 2
             x, y = values["-GRAPH2-"]
@@ -733,19 +760,19 @@ def main_gui():
                 select_fig = None
         elif  event == 'Edit':
             if select_fig is None:
-                sg.Popup('No Feature selected')
+                popup_info('No Feature selected')
             else:
                 print('this works')
         elif event in ('Insert', "-Feature-") and graph2 and feature_name:
             # Get the user input for the object by creating another window
             # Returns a dictionary of strings (if a key is not used: in list format)
             if feature_name in wall_objects and (not select_fig or type(feature_dict[select_fig]) != type(bd.Wall())):
-                sg.Popup('Please select a Wall for inserting Doors and windows')
+                popup_info('Please select a Wall for inserting Doors and windows')
                 continue
             feature_info = feature_input_window(feat_types, feature_name)
             if (feature_info == None or feature_info['-FEATURE LENGTH-'] == 0
                 or feature_info['-FEATURE WIDTH-'] == 0):
-                sg.Popup('Feature Length and Width Required')
+                popup_info('Feature Length and Width Required')
                 continue
             if feature_info['-FEATURE ANGLE-'] == '':
                 feature_info['-FEATURE ANGLE-'] = 0.0
@@ -777,17 +804,17 @@ def main_gui():
             graph1.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
         elif  event == 'Set Distance':
             if crop:
-                sg.Popup('Area of interest not selected!')
+                popup_info('Area of interest not selected!')
                 continue
             set_distance = True
-            sg.Popup('Select point A')
+            popup_info('Select point A')
         elif  event == 'Extract Feature' and graph2:
             graph2.set_size((0,0)) # This will free up the space for graph2
             graph1.set_size(window_size)
             window.refresh() # This must be refreshed before making anything invisible
             window.Element('-GRAPH1-').Update(visible=True)
             window.Element('-GRAPH2-').Update(visible=False)
-            sg.Popup('Select the feature to be extracted')
+            popup_info('Select the feature to be extracted')
 
             extract_feature = True
         elif  event == 'Toggle':
@@ -800,7 +827,7 @@ def main_gui():
                 graph2.send_figure_to_back(blueprint_2_ID)
         elif  event == 'Window Settings':
             if graph2:
-                sg.Popup('Window Settings cannot be changed after using the Convert tool')
+                popup_info('Window Settings cannot be changed after using the Convert tool')
                 continue
             window_settings = [width_percent, height_percent, image_window_percent, image_resolution]
             window_settings = get_window_settings(window_settings)
@@ -832,9 +859,9 @@ def main_gui():
         elif  event == '-EXPORT-':
             success = values[event]
             if success:
-                sg.Popup('Successfully Exported!')
+                popup_info('Successfully Exported!')
                 continue
-            sg.Popup('Export Failed!')
+            popup_info('Export Failed!')
 
     # --------------------------------- Close & Exit ---------------------------------
     window.close()
