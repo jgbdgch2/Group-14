@@ -198,7 +198,7 @@ def popup_info(info):
               [sg.Button(' OK ')]]
 
     window = sg.Window('Window', layout, element_justification='c',
-                       return_keyboard_events=True).finalize()
+                       return_keyboard_events=True, keep_on_top=True).finalize()
     event, values = window.read()
     window.close()
 
@@ -380,6 +380,7 @@ def get_window_settings(settings):
               [sg.Text('Blueprint Import Resolution (Only applied when importing):', size =(50, 1))],
               [sg.Slider(range=(0, 10000), default_value=settings[3], size=(50, 10), orientation="h",
                          enable_events=True, key='-IMAGE RESOLUTION-')],
+              [sg.Button('Reset to Default', key='-RESET-')],
               [sg.Submit(bind_return_key=True), sg.Cancel()]]
 
     window = sg.Window('Window Settings', layout)
@@ -388,6 +389,9 @@ def get_window_settings(settings):
         if event in (sg.WIN_CLOSED, 'Exit', 'Cancel'):
             window.close()
             return None
+        elif event == '-RESET-':
+            window.close()
+            return ''
         elif event == 'Submit':
             break
 
@@ -493,12 +497,18 @@ def main_gui():
     graph2 = window["-GRAPH2-"]
     graph2.bind('<Button-3>', '+RIGHT2+')
     # --------------------------------- Initialize Variables------------------------
-    width_percent = 0.84            # What percent of the window width is graph
-    height_percent = 0.94           # What percent of the window height is graph
-    image_window_percent = 1.20     # Image scaling
-    image_resolution = 10000        # Blueprint original resolution
     if sg.user_settings_file_exists():
-        print('These settings')
+        settings = sg.UserSettings()
+        width_percent = settings['-WIDTH PERCENT-']
+        height_percent = settings['-HEIGHT PERCENT-']
+        image_window_percent = settings['-IMAGE PERCENT-']
+        image_resolution = settings['-IMAGE RESOLUTION-']
+    else:
+        settings = sg.UserSettings()
+        settings['-WIDTH PERCENT-']    = width_percent        = 0.84     # What percent of the window width is graph
+        settings['-HEIGHT PERCENT-']   = height_percent       = 0.94     # What percent of the window height is graph
+        settings['-IMAGE PERCENT-']    = image_window_percent = 1.20     # Image scaling
+        settings['-IMAGE RESOLUTION-'] = image_resolution     = 10000    # Blueprint original resolution
     window_size = (window_width * width_percent, window_height * height_percent)
     dragging1 = dragging2 = crop = set_distance = extract_feature = False
     start_point = end_point = filename = feature_name = select_fig = img = None
@@ -509,6 +519,7 @@ def main_gui():
     # --------------------------------- Event Loop ---------------------------------
     while True:
         event, values = window.read()
+
         if bound_top and event != '-FILE LIST-': # delete the bounds if they exist
             # delete bounds
             graph2.delete_figure(bound_top)
@@ -724,6 +735,8 @@ def main_gui():
             else:
                 x, y = values["-GRAPH2-"]
                 end_point2 = (x, y)
+                if not start_point2:
+                    continue
                 start2_x, start2_y = start_point2
                 if not fig:
                     fig = graph2.get_figures_at_location((x,y))
@@ -832,13 +845,22 @@ def main_gui():
             window_settings = [width_percent, height_percent, image_window_percent, image_resolution]
             window_settings = get_window_settings(window_settings)
 
-            if not window_settings:
+            if window_settings == None:
                 continue
-
-            width_percent = window_settings['-WIDTH PERCENT-']
-            height_percent = window_settings['-HEIGHT PERCENT-']
-            image_window_percent = window_settings['-IMAGE WINDOW PERCENT-']
-            image_resolution = window_settings['-IMAGE RESOLUTION-']
+            if window_settings == '': # The empty string is used here to indicate to reset to default
+                width_percent        = 0.84     # What percent of the window width is graph
+                height_percent       = 0.94     # What percent of the window height is graph
+                image_window_percent = 1.20     # Image scaling
+                image_resolution     = 10000    # Blueprint original resolution
+            else:
+                width_percent        = window_settings['-WIDTH PERCENT-']
+                height_percent       = window_settings['-HEIGHT PERCENT-']
+                image_window_percent = window_settings['-IMAGE WINDOW PERCENT-']
+                image_resolution     = window_settings['-IMAGE RESOLUTION-']
+            settings['-WIDTH PERCENT-']    = width_percent
+            settings['-HEIGHT PERCENT-']   = height_percent
+            settings['-IMAGE PERCENT-']    = image_window_percent
+            settings['-IMAGE RESOLUTION-'] = image_resolution
             window_size = (window_width * width_percent, window_height * height_percent)
 
             if graph1:
