@@ -253,7 +253,7 @@ def machine_learning_feature_data_extractor(im, pixelToInches):
 def feature_data_extractor(im, bounding_box, pixelToInches, element_type):
     if element_type == "Wall":
         center, length, angle, thickness = find_wall(im, bounding_box, pixelToInches)
-        return building_data.Wall((center[0]*pixelToInches, center[1]*pixelToInches), length/pixelToInches, angle, thickness/pixelToInches)
+        return building_data.Wall((center[0]/pixelToInches, center[1]/pixelToInches), length/pixelToInches, angle, thickness/pixelToInches)
     return None
     
     
