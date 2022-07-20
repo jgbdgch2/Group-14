@@ -468,7 +468,7 @@ class Wall:
         assert type(X) == type(0.0) and type(Y) == type(0.0), f"pos must be a tuple of floats, got {type(X)} and {type(Y)}."
         assert type(length) == type(0.0), f"length must be a type float, got type {type(length)}."
         assert type(angle) == type(0.0), f"angle must be type float, got type {type(angle)}."
-        assert type(wallType) == type(WallType()), f"wallType must be WallType object, got type {type(wallType)}."
+        #assert type(wallType) == type(WallType() or type(wallType) == type(0.0)), f"wallType must be WallType object, got type {type(wallType)}."
 
         self.xPos, self.yPos = pos
         self.length = length
