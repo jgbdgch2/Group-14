@@ -10,9 +10,11 @@ from pdf2image import convert_from_path, convert_from_bytes
 import tkinter
 import copy
 import math
+import cv2
 
 import building_data as bd
 import ifc_compiler as ifc
+import measurement_marker_detector as mmd
 
 wall_objects = ('Door', 'Window') # This doesn't change and is used throughout the GUI
 
@@ -434,14 +436,14 @@ def get_building_wall_info(building_wall):
                    }
     return feature_info
 
-def graph_draw_from_data(story, graph, feature_dict, x_pixel_ratio, folder, feature_images):
+def graph_draw_from_data(story, graph, feature_dict, pixel_ratio, folder, feature_images):
     for wall in story.listOfWalls:
-        draw_wall_and_other(graph, folder, feature_images, wall, feature_dict, x_pixel_ratio)
+        draw_wall_and_other(graph, folder, feature_images, wall, feature_dict, pixel_ratio)
 
-def draw_wall_and_other(graph, folder, feature_images, wall, feature_dict, x_pixel_ratio):
+def draw_wall_and_other(graph, folder, feature_images, wall, feature_dict, pixel_ratio):
     wall_info = get_building_wall_info(wall)
     wall_info['-FEATURE-'] = 'Wall'
-    fig_id = draw_feature(graph, folder, feature_images, wall_info, x_pixel_ratio)
+    fig_id = draw_feature(graph, folder, feature_images, wall_info, pixel_ratio)
     feature_dict[fig_id] = wall
     door_info = {}
     window_info = {}
@@ -449,17 +451,17 @@ def draw_wall_and_other(graph, folder, feature_images, wall, feature_dict, x_pix
     window_info['-FEATURE-'] = 'Window'
     for door in wall.listOfDoors:
         door_info = get_feature_info(door, door_info, wall_info)
-        fig_id = draw_feature(graph, folder, feature_images, door_info, x_pixel_ratio)
+        fig_id = draw_feature(graph, folder, feature_images, door_info, pixel_ratio)
         feature_dict[fig_id] = door
     for window in wall.listOfWindows:
         window_info = get_feature_info(window, window_info, wall_info)
-        fig_id = draw_feature(graph, folder, feature_images, window_info, x_pixel_ratio)
+        fig_id = draw_feature(graph, folder, feature_images, window_info, pixel_ratio)
         feature_dict[fig_id] = window
 
-def draw_feature(graph, folder, feature_images, feature_info, x_pixel_ratio):
-    feature_size = int(feature_info['-FEATURE LENGTH-'] * x_pixel_ratio)
-    x = feature_info['-X POS-']
-    y = feature_info['-Y POS-']
+def draw_feature(graph, folder, feature_images, feature_info, pixel_ratio):
+    feature_size = int(feature_info['-FEATURE LENGTH-'] * pixel_ratio)
+    x = feature_info['-X POS-'] * pixel_ratio
+    y = feature_info['-Y POS-'] * pixel_ratio
     rotate_angle = feature_info['-FEATURE ANGLE-']
     shape = feature_size, feature_size
     feature_path = os.path.join(folder, feature_images[feature_info['-FEATURE-']])
@@ -473,9 +475,10 @@ def draw_feature(graph, folder, feature_images, feature_info, x_pixel_ratio):
         feature = make_transparent_edges(feature)
 
     if feature_info['-FEATURE-'] in wall_objects:
-        x, y = get_coord(x, y, rotate_angle, feature_info['-DISTANCE-'] * x_pixel_ratio)
+        x, y = get_coord(x, y, rotate_angle, feature_info['-DISTANCE-'] * pixel_ratio)
 
-    fig_id = graph.draw_image(data=convert_to_bytes(feature), location=(x - shift[0], y + shift[1]))
+    fig_id = graph.draw_image(data=convert_to_bytes(feature),
+                              location=((x - shift[0]), (y + shift[1])))
     return fig_id
 
 def get_coord(x, y, rotate_angle, distance):
@@ -548,7 +551,7 @@ def main_gui():
     window.Element('-STORY LIST-').Update(visible=False)
     window.Element('-GRAPH1-').Update(visible=False)
     window.Element('-GRAPH2-').Update(visible=False)
-    #window.Element('-Convert-').Update(visible=False)
+    window.Element('-Convert-').Update(visible=False)
     window.Element('-EXPORT IFC-').Update(visible=False)
 
     # --------------------------------- Add feature objects ---------------------------
@@ -629,8 +632,8 @@ def main_gui():
                         story_info = story_input_tool('First Floor')
                     else:
                         story_info = story_input_tool(story_info['-STORY NAME-'])
-                buildingData.appendStory(bottomElevation = bd.Elevation(story_info['-BOTTOM ELEVATION-']), \
-                                        topElevation = bd.Elevation(story_info['-TOP ELEVATION-']))
+                buildingData.appendStory(bottomElevation = story_info['-BOTTOM ELEVATION-'],
+                                        topElevation = story_info['-TOP ELEVATION-'])
                 popup_info('Searching for Blueprint...')
                 start_point = end_point = filename = feature_name = select_fig = img = None
                 orig_img = a_set = bound_top = bound_bottom = fig = a_point = y_pixel_ratio = None
@@ -777,8 +780,17 @@ def main_gui():
                         # image, bounds, pixel_ratio, wall_string
                         # return wall object with no wall type just a float
                         top_left = int(left*h), int(top*v)
-                        bottom_right = int(right*h), int(bottom*v))
-                        # wall_object = 
+                        bottom_right = int(right*h), int(bottom*v)
+                        bounding_box = top_left, bottom_right
+                        try:
+                            send_img = cv2.imread("./blueprint_features/save.png")
+                        except Exception as E:
+                            print('** Error {} **'.format(E))
+                        wall_object = mmd.feature_data_extractor(send_img,
+                                                                 bounding_box,
+                                                                 x_pixel_ratio,
+                                                                 feature_info['-FEATURE TYPE-'])
+                        print(wall_object)
                         # Features extracted
                         graph1.delete_figure(prior_rect)
                         switch_to_other_graph(window, '-GRAPH1-', graph1, '-GRAPH2-', graph2, window_size)
