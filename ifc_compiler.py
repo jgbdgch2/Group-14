@@ -307,9 +307,9 @@ def compileStory(f, Story, storyNumber):
 
     # Declare bottom elevation of the story where all the elements are listed
     f.write("#" + str(ifcPointer) + "= IFCBUILDINGSTOREY('" + getGUID() + "',$,'Story " + str(storyNumber) + \
-    " Base',$,$,#" + str(storyLocalPlacement) + ",$,'Story " + str(storyNumber) + " Base',.ELEMENT.," + str(Story.bottomElevation.height) + ");\n")
+    " Base',$,$,#" + str(storyLocalPlacement) + ",$,'Story " + str(storyNumber) + " Base',.ELEMENT.," + str(Story.bottomElevation) + ");\n")
     ifcPointer +=1
-    f.write("#" + str(ifcPointer) + "= IFCCARTESIANPOINT((0.,0.,"+ str(Story.bottomElevation.height) + "));\n")
+    f.write("#" + str(ifcPointer) + "= IFCCARTESIANPOINT((0.,0.,"+ str(Story.bottomElevation) + "));\n")
     ifcPointer +=1
     f.write("#" + str(ifcPointer) + "= IFCAXIS2PLACEMENT3D(#" + str(ifcPointer-1) + ",$,$);\n")
     ifcPointer +=1
@@ -334,6 +334,8 @@ def compile(buildingData, filename):
     f = open(filename, "w")
     global unitModifier
     global ifcPointer
+    # reinitialize ifcPointer to 100 for a new ifc file
+    ifcPointer = 100
     # Set up IFC Template
     f.write(ifcTemplate)
 
