@@ -505,7 +505,7 @@ def main_gui():
     graph1_menu_def = ['&Right', ['Rotate', 'Set Distance']]
     graph2_menu_def = ['&Right', ['Edit', 'Duplicate', 'Insert', 'Delete', 'Toggle']]
     # First is the top menu
-    menu_def = [['&File', ['&New       ALT-N', '&Save      ALT-S', '&Load Recent', 'E&xit']],
+    menu_def = [['&File', ['&New       ALT-N', '&Quick Save', '&Load Recent', 'E&xit']],
                 ['&Edit', ['Extract Feature', '!Add Story']],
                 ['Se&ttings', ['&Window Settings', '!Help']]]
 
@@ -602,7 +602,7 @@ def main_gui():
     start_point = end_point = filename = feature_name = select_fig = img = None
     orig_img = a_set = bound_top = bound_bottom = fig = a_point = y_pixel_ratio = None
     x_pixel_ratio = feature_path = user_distance = prior_rect = start_point1 = None
-    end_point1 = graph2 = start_point2 = data = new_size = None
+    end_point1 = graph2 = start_point2 = data = new_size = save_convert = None
     feature_dict = {}
     # --------------------------------- Event Loop ---------------------------------
     while True:
@@ -616,6 +616,8 @@ def main_gui():
         if event in (sg.WIN_CLOSED, 'Exit'): # Closes the App
             break
         if event == 'New       ALT-N': # Creates a new blueprint conversion environment
+            settings['-SAVE CONVERT-'] = False
+            save_convert = False
             new_size = int(window_size[1] * image_window_percent)
             mult = image_resolution // new_size
             pdf_file = get_pdf_name()
@@ -642,6 +644,7 @@ def main_gui():
                 feature_dict = {}
         elif event == '-LOADED PDF-':
             if graph2:
+                graph2.erase()
                 graph2 = None
                 window.Element('-GRAPH2-').Update(visible=False)
             orig_img = values[event]
@@ -677,6 +680,7 @@ def main_gui():
             window.Element('-Convert-').Update(visible=False)
             window.Element('-EXPORT IFC-').Update(visible=True)
         elif event == "-LOADED EXTRACTION-":
+            save_convert = True
             popup_info('Blueprint feature extraction complete!')
             graph_draw_from_data(buildingData.listOfStories[story], window['-GRAPH2-'],
                                  feature_dict, x_pixel_ratio, folder, feature_images)
@@ -829,9 +833,6 @@ def main_gui():
                         graph1.delete_figure(b_point)
                         if y_pixel_ratio and x_pixel_ratio:
                             # Save
-                            settings['-X RATIO-'] = x_pixel_ratio
-                            settings['-Y RATIO-'] = y_pixel_ratio
-                            orig_img.save('./blueprint_features/save.png')
                             window.Element('-Convert-').Update(visible=True)
                         a_set = a_point = b_point = user_distance = None
                         set_distance = False
@@ -987,20 +988,43 @@ def main_gui():
                 popup_info('Successfully Exported!')
                 continue
             popup_info('Export Failed!')
-        elif  event == 'Load Recent' and new_size and not graph2:
-            try:
-                orig_img = PIL.Image.open(r"./blueprint_features/save.png")
-                img = resize_img(orig_img, (new_size, new_size))
-                x_pixel_ratio = settings['-X RATIO-']
-                y_pixel_ratio = settings['-Y RATIO-']
-                window.Element('-Convert-').Update(visible=True)
-                graph1.erase()
-                graph1.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
-                if crop:
-                    crop = False
-            except Exception as E:
-                print('** Error {} **'.format(E))
-
+        elif  event == 'Load Recent':
+            orig_img = PIL.Image.open(r"./blueprint_features/save.png")
+            new_size = int(window_size[1] * image_window_percent)
+            mult = image_resolution // new_size
+            img = resize_img(orig_img, (new_size, new_size))
+            x_pixel_ratio = settings['-X RATIO-']
+            y_pixel_ratio = settings['-Y RATIO-']
+            img = resize_img(orig_img, (new_size, new_size))
+            graph1 = window["-GRAPH1-"]  # type: sg.Graph
+            graph1.erase()
+            graph1.set_size(window_size)
+            graph1.change_coordinates((0,0), window_size)
+            graph1.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
+            window['-TOUT-'].update(visible=False)
+            window.Element('-GRAPH1-').Update(visible=True)
+            window.Element('-Convert-').Update(visible=True)
+            graph1.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
+            crop = False
+            buildingData = bd.readJSON("save.json")
+            if settings['-SAVE CONVERT-']:
+                save_convert = True
+                graph2 = window["-GRAPH2-"]  # type: sg.Graph
+                graph2.set_size(window_size)
+                graph2.change_coordinates((0,0), window_size)
+                blueprint_2_ID = graph2.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
+                switch_to_other_graph(window, '-GRAPH1-', graph1, '-GRAPH2-', graph2, window_size)
+                #window.Element('-Convert-').Update(visible=False)
+                #window.Element('-EXPORT IFC-').Update(visible=True)
+                graph_draw_from_data(buildingData.listOfStories[story], graph2,
+                                     feature_dict, x_pixel_ratio, folder, feature_images)
+        elif  event == 'Quick Save':
+            settings['-SAVE CONVERT-'] = save_convert
+            settings['-X RATIO-'] = x_pixel_ratio
+            settings['-Y RATIO-'] = y_pixel_ratio
+            orig_img.save('./blueprint_features/save.png')
+            bd.writeJSON(buildingData, "save.json")
+            popup_info('Saved!')
     # --------------------------------- Close & Exit ---------------------------------
     window.close()
 
