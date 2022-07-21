@@ -3,11 +3,6 @@ import json
 
 #import ifc_compiler
 
-#TODO add more comments
-#TODO lookup hit should return "None" instead of -1
-
-#Note: all members called measurement_system_flag must be "IMPERIAL_UNITS" or "METRIC_UNITS"
-
 class BuildingData:
     #The 3 lists are lists of their respective classes
     #Building schedule is a Schedule object which is create in __init__
@@ -601,19 +596,19 @@ def testCode():
 
 
     #South wall
-    buildingData.listOfStories[0].append(Wall(pos=(1135.0, 1680.0), length=395.0, angle=145.0,\
+    buildingData.listOfStories[0].append(Wall(pos=(268.46, 397.37), length=395.0, angle=145.0,\
                                             wallType=buildingData.buildingSchedule.searchByType(1)))
 
     #East wall
-    buildingData.listOfStories[0].append(Wall(pos=(390.0, 935.0), length=395.0, angle=90.0,\
+    buildingData.listOfStories[0].append(Wall(pos=(92.25,221.16), length=395.0, angle=90.0,\
                                             wallType=buildingData.buildingSchedule.searchByType(1)))
 
     #North wall
-    buildingData.listOfStories[0].append(Wall(pos=(1880.0, 935.0), length=395.0, angle=90.0,\
+    buildingData.listOfStories[0].append(Wall(pos=(444.67, 221.16), length=395.0, angle=90.0,\
                                             wallType=buildingData.buildingSchedule.searchByType(1)))
 
     #West wall
-    buildingData.listOfStories[0].append(Wall(pos=(1135.0, 190.0), length=395.0, angle=0.0, \
+    buildingData.listOfStories[0].append(Wall(pos=(268.46, 44.94), length=395.0, angle=0.0, \
                                             wallType=buildingData.buildingSchedule.searchByType(1)))
                                             # 4.227848101265823
                                             # 1670
@@ -625,8 +620,8 @@ def testCode():
 
     #ifc_compiler.compile(buildingData, "buildingData.ifc")
 
-    writeJSON(buildingData, "save.json")
-    bd = readJSON("save.json")
+    #writeJSON(buildingData, "save.json")
+    #bd = readJSON("save.json")
 
     #ifc_compiler.compile(buildingData, "bd.ifc")
 
