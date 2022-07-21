@@ -281,9 +281,9 @@ def compileDoor(f, Door, Wall, ifcWallPointer, storyLocalPlacement):
     returnString = "#" + str(ifcDoorPointer) + ","
     return returnString
 
-def compileWall(f, Wall, storyLocalPlacement):
+def compileWall(f, Wall, storyLocalPlacement, wallHeight):
     global ifcPointer
-    printVerticalShapeDef(f, getWallCoords(Wall), 8.0)
+    printVerticalShapeDef(f, getWallCoords(Wall), wallHeight)
     #221= IFCWALL('1btdOju4n3KfkQnsDbRkrg', $, $, $, $, #storyLocalPlacement, #220, '2712', .NOTDEFINED.);
     f.write("#" + str(ifcPointer) + "= IFCWALL('" + getGUID() + "', $, '" + Wall.wallType.name + "', $, $, #" + str(storyLocalPlacement) + ", #" + str(ifcPointer-1) + ", $, .NOTDEFINED.);\n")
     ifcWallPointer = ifcPointer
@@ -301,6 +301,7 @@ def compileWall(f, Wall, storyLocalPlacement):
 
 def compileStory(f, Story, storyNumber):
     global ifcPointer
+    global unitModifier
     storyPointer = ifcPointer;
     storyLocalPlacement = ifcPointer+3;
     storyElements = ""
@@ -319,7 +320,8 @@ def compileStory(f, Story, storyNumber):
     ifcPointer +=1
 
     for Wall in Story.listOfWalls:
-        storyElements = storyElements + compileWall(f, Wall, storyLocalPlacement)
+        wallHeight = (Story.topElevation - Story.bottomElevation) / unitModifier
+        storyElements = storyElements + compileWall(f, Wall, storyLocalPlacement, wallHeight)
 
     storyElements = storyElements[:len(storyElements)-1] # Removes extra , from end of string
 
