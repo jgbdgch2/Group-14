@@ -1,12 +1,78 @@
 {
     "buildingSchedule": {
-        "listOfDoorTypes": [],
-        "listOfWallTypes": [],
-        "listOfWindowTypes": []
+        "listOfDoorTypes": [
+            {
+                "height": 84.0,
+                "name": "the Pearly Gates",
+                "typeNumber": 2,
+                "width": 36.0
+            }
+        ],
+        "listOfWallTypes": [
+            {
+                "name": "das conk creet baybee",
+                "thickness": 8.0,
+                "typeNumber": 1
+            }
+        ],
+        "listOfWindowTypes": [
+            {
+                "height": 24.0,
+                "name": "the Pearly window",
+                "sillHeight": 12.0,
+                "typeNumber": 3,
+                "width": 24.0
+            }
+        ]
     },
     "isImperial": true,
     "listOfElevations": [],
-    "listOfGridlines": [],
+    "listOfGridlines": [
+        {
+            "cood0": [
+                0.0,
+                0.0
+            ],
+            "cood1": [
+                2000.0,
+                0.0
+            ],
+            "name": "placeholder"
+        },
+        {
+            "cood0": [
+                0.0,
+                1000.0
+            ],
+            "cood1": [
+                2000.0,
+                1000.0
+            ],
+            "name": "placeholder"
+        },
+        {
+            "cood0": [
+                0.0,
+                0.0
+            ],
+            "cood1": [
+                0.0,
+                1000.0
+            ],
+            "name": "placeholder"
+        },
+        {
+            "cood0": [
+                2000.0,
+                0.0
+            ],
+            "cood1": [
+                2000.0,
+                1000.0
+            ],
+            "name": "placeholder"
+        }
+    ],
     "listOfStories": [
         {
             "bottomElevation": 0.0,
