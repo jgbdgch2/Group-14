@@ -625,4 +625,6 @@ def testCode():
 
     #ifc_compiler.compile(buildingData, "bd.ifc")
 
+    return buildingData
+
 #testCode()
