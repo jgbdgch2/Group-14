@@ -1,6 +1,7 @@
 import numpy as np
+import json
 
-#import ifc_compiler.py
+#import ifc_compiler
 
 #TODO add more comments
 #TODO lookup hit should return "None" instead of -1
@@ -49,6 +50,10 @@ class BuildingData:
         for x in self.listOfStories:
             x.findWallJoins()
 
+    def toJSON(self):
+        return json.dumps(self, default=lambda o: o.__dict__,
+            sort_keys=True, indent=4)
+
 class Gridline:
     #The thing that goes inside the bubble
     name=""
@@ -74,31 +79,6 @@ class Gridline:
         self.cood0 = cood0
         self.cood1 = cood1
         #self.measurement_system_flag = measurement_system_flag
-
-class Elevation:
-
-    name=""
-    height = 0.0
-    #measurement_system_flag = "IMPERIAL_UNITS"
-
-    def __init__(self, \
-                height=-0.0):
-                #measurement_system_flag="IMPERIAL_UNITS"):
-        #type checking
-        assert type(height) == type(0.0), f"Height must be float, got type {type(height)}"
-        #assert measurement_system_flag == "IMPERIAL_UNITS" or \
-        #    measurement_system_flag == "METRIC_UNITS", \
-        #    f'Measurement system must be "IMPERIAL_UNITS" or "METRIC_UNITS", \
-        #    got "{measurement_system_flag}" of type {type(measurement_system_flag)}. of type {type(measurement_system_flag)}'
-
-        self.height = height
-        #self.measurement_system_flag = measurement_system_flag
-
-    def setHeight(self, height):
-        assert type(height) == type(0.0), f"Height must be float, got type {type(height)}"
-        self.height = height
-    def getHeight(self):
-        return self.height
 
 class Schedule:
     #3 seperate lists representing each schedule
@@ -333,8 +313,8 @@ class Story:
         self.topElevation = topElevation
         self.listOfWalls = []
         self.listOfWallJoins = []
-        assert type(bottomElevation) == type(Elevation()), f"bottomElevation must be elevation, got type {type(bottomElevation)}."
-        assert type(topElevation) == type(Elevation()), f"topElevation must be elevation, got type {type(topElevation)}."
+        assert type(bottomElevation) == type(1.0), f"bottomElevation must be float, got type {type(bottomElevation)}."
+        assert type(topElevation) == type(1.0), f"topElevation must be float, got type {type(topElevation)}."
 
     #TODO append delete search return functions for all 3 lists
 
@@ -345,25 +325,6 @@ class Story:
             return 0;
 
         raise Exception("Incompatiable object passed to append to schedule")
-
-    #Meaningless functions until I implement elevations
-    def getBottomElevation(self):
-        return self.bottomElevation
-
-    def getTopElevation(self):
-        return self.topElevation
-
-    def setBottomElevation(self, bottomElevation):
-        self.bottomElevation = bottomElevation
-
-    def setTopElevation(self, topElevation):
-        self.topElevation = topElevation
-
-    def updateTopElevation(self, height):
-        self.topElevation.setHeight(height)
-
-    def updateBottomElevation(self, height):
-        self.bottomElevation.setHeight(height)
 
     def findWallJoins(self):
         for i in range(len(self.listOfWalls)):
@@ -448,6 +409,7 @@ class Wall:
 
     #Reference to WallType object
     wallType = -1
+    typeNumber = 0
 
     #Optional field, if left empty will default to the distance between elevation markers
     #TODO add support for this lmao
@@ -474,6 +436,7 @@ class Wall:
         self.length = length
         self.angle = angle
         self.wallType = wallType
+        self.typeNumber = wallType.typeNumber
 
         self.listOfDoors = []
         self.listOfWindows = []
@@ -499,6 +462,7 @@ class Door:
 
     #Reference to DoorType object
     doorType = -1
+    typeNumber = 0
 
     #Str array of info about wall
     #Includes tags
@@ -516,6 +480,7 @@ class Door:
         self.position = position
         self.hingePos = hingePos
         self.doorType = doorType
+        self.typeNumber = doorType.typeNumber
 
 class Window:
 
@@ -529,6 +494,7 @@ class Window:
 
     #Reference to WindowType object
     windowType = -1
+    typeNumber = 0
 
     #Str array of info about wall
     #Includes tags
@@ -549,6 +515,50 @@ class Window:
         self.sillHeight = sillHeight
         self.directionFacing = directionFacing
         self.windowType = windowType
+        self.typeNumber = windowType.typeNumber
+
+# Writes a JSON file to the path specified by filename
+# Returns True if successful
+def writeJSON(buildingData, filename):
+    save = open(filename, "w")
+    save.write(buildingData.toJSON())
+    return True
+
+# Returns a BuildingData object from the given json file
+def readJSON(filename):
+    bd = BuildingData()
+    read = open(filename, "r")
+    jsonDict = json.load(read)
+    print(jsonDict)
+    # Set is isImperial
+    bd.isImperial = jsonDict['isImperial']
+
+    # Add elevations and gridlines
+    for key in jsonDict['listOfGridlines']:
+        bd.appendGridline((key['cood0'][0],key['cood0'][1]),(key['cood1'][0],key['cood1'][1]))
+
+    # Add the schedule
+    for key in jsonDict['buildingSchedule']['listOfDoorTypes']:
+        bd.buildingSchedule.append(DoorType(typeNumber=key['typeNumber'], name=key['name'], height=key['height'], width=key['width']))
+    for key in jsonDict['buildingSchedule']['listOfWallTypes']:
+        bd.buildingSchedule.append(WallType(typeNumber=key['typeNumber'], name=key['name'], thickness=key['thickness']))
+    for key in jsonDict['buildingSchedule']['listOfWindowTypes']:
+        bd.buildingSchedule.append(WindowType(typeNumber=key['typeNumber'], name=key['name'], height=key['height'], width=key['width'], sillHeight=key['sillHeight']))
+
+    i = 0
+    for story in jsonDict['listOfStories']:
+        bd.appendStory(bottomElevation = story['bottomElevation'], topElevation = story['topElevation'])
+        j = 0
+        for wall in story['listOfWalls']:
+            bd.listOfStories[i].append(Wall(pos=(wall['xPos'], wall['yPos']), length=wall['length'], angle=wall['angle'], wallType=bd.buildingSchedule.searchByType(wall['typeNumber'])))
+            for door in wall['listOfDoors']:
+                bd.listOfStories[i].listOfWalls[j].append(Door(position = door['position'], hingePos = door['hingePos'], doorType=bd.buildingSchedule.searchByType(door['typeNumber'])))
+            for wind in wall['listOfWindows']:
+                bd.listOfStories[i].listOfWalls[j].append(Window(position = wind['position'], directionFacing = wind['directionFacing'], \
+                                                          windowType = bd.buildingSchedule.searchByType(wind['typeNumber'])))
+            j += 1
+        i += 1
+    return bd
 
 # Function containing some test code
 def testCode():
@@ -572,14 +582,6 @@ def testCode():
         3
 
 
-    buildingData.appendElevation(0.0)
-
-    buildingData.appendElevation(96.0)
-
-    assert len(buildingData.listOfElevations) == 2
-    assert buildingData.listOfElevations[0].height == 0.0
-    assert buildingData.listOfElevations[1].height == 96.0
-
     buildingData.buildingSchedule.append(WallType(typeNumber=1, \
                                                 name="das conk creet baybee", \
                                                 thickness=8.0))
@@ -595,12 +597,9 @@ def testCode():
                                                 width=24.0, \
                                                 sillHeight=12.0))
 
-    buildingData.appendStory(bottomElevation = buildingData.listOfElevations[0], \
-                            topElevation = buildingData.listOfElevations[1])
+    buildingData.appendStory(bottomElevation = 0.0, \
+                            topElevation = 96.0)
 
-    buildingData.listOfStories[0].updateTopElevation(120.0)
-
-    assert buildingData.listOfStories[0].getTopElevation().getHeight() == 120.0
 
     #South wall
     buildingData.listOfStories[0].append(Wall(pos=(120.0, 4.0), length=240.0, angle=0.0,\
@@ -622,10 +621,13 @@ def testCode():
 
     buildingData.listOfStories[0].listOfWalls[0].append(Window(position = -40.0, directionFacing = 0, windowType = buildingData.buildingSchedule.searchByType(3)))
 
-    buildingData.findWallJoinsHelper()
-    for join in buildingData.listOfStories[0].listOfWallJoins:
-        print(join[0].getPos(), join[1].getPos())
+    #buildingData.findWallJoinsHelper()
 
-    #ifc_compiler.compile(buildingData)
+    #ifc_compiler.compile(buildingData, "buildingData.ifc")
 
-    return buildingData
+    writeJSON(buildingData, "save.json")
+    bd = readJSON("save.json")
+
+    #ifc_compiler.compile(buildingData, "bd.ifc")
+
+#testCode()
