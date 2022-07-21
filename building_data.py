@@ -529,7 +529,6 @@ def readJSON(filename):
     bd = BuildingData()
     read = open(filename, "r")
     jsonDict = json.load(read)
-    print(jsonDict)
     # Set is isImperial
     bd.isImperial = jsonDict['isImperial']
 
