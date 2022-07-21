@@ -9,9 +9,12 @@ import zipfile
 from pdf2image import convert_from_path, convert_from_bytes
 import tkinter
 import copy
+import math
 
 import building_data as bd
 import ifc_compiler as ifc
+
+wall_objects = ('Door', 'Window') # This doesn't change and is used throughout the GUI
 
 def create_feature(info_dict, buildingData, story_id):
     type = info_dict['-FEATURE TYPE-']
@@ -369,16 +372,16 @@ def feature_input_window(feat_list, feature_name):
 
 def get_window_settings(settings):
     layout = [[sg.Text('Window Width Percent:', size =(20, 1))],
-              [sg.Slider(range=(0, 100), default_value=settings[0]*100, size=(50, 10), orientation="h",
+              [sg.Slider(range=(25, 100), default_value=settings[0]*100, size=(50, 10), orientation="h",
                          enable_events=True, key='-WIDTH PERCENT-')],
               [sg.Text('Window Height Percent:', size =(20, 1))],
-              [sg.Slider(range=(0, 100), default_value=settings[1]*100, size=(50, 10), orientation="h",
+              [sg.Slider(range=(25, 100), default_value=settings[1]*100, size=(50, 10), orientation="h",
                          enable_events=True, key='-HEIGHT PERCENT-')],
               [sg.Text('Blueprint Scaling (Only applied when importing):', size =(50, 1))],
-              [sg.Slider(range=(0, 200), default_value=settings[2]*100, size=(50, 10), orientation="h",
+              [sg.Slider(range=(25, 200), default_value=settings[2]*100, size=(50, 10), orientation="h",
                          enable_events=True, key='-IMAGE WINDOW PERCENT-')],
               [sg.Text('Blueprint Import Resolution (Only applied when importing):', size =(50, 1))],
-              [sg.Slider(range=(0, 10000), default_value=settings[3], size=(50, 10), orientation="h",
+              [sg.Slider(range=(1000, 10000), default_value=settings[3], size=(50, 10), orientation="h",
                          enable_events=True, key='-IMAGE RESOLUTION-')],
               [sg.Button('Reset to Default', key='-RESET-')],
               [sg.Submit(bind_return_key=True), sg.Cancel()]]
@@ -403,13 +406,103 @@ def get_window_settings(settings):
 
     return values
 
+def machine_learning_features(img, buildingData, y_pixel_ratio): # Testing code for machine learning extraction
+    data = bd.testCode()
+    for wall in data.listOfStories[0].listOfWalls:
+        buildingData.listOfStories[0].append(wall)
+    return buildingData
+
+def get_feature_info(feature, wall_feature, wall_info):
+    wall_feature['-DISTANCE-'] = feature.position
+    wall_feature['-FEATURE ANGLE-'] = wall_info['-FEATURE ANGLE-']
+    wall_feature['-X POS-'] = wall_info['-X POS-']
+    wall_feature['-Y POS-'] = wall_info['-Y POS-']
+    if wall_feature['-FEATURE-'] == 'Window':
+        wall_feature['-FEATURE LENGTH-'] = feature.windowType.width
+    elif wall_feature['-FEATURE-'] == 'Door':
+        wall_feature['-FEATURE LENGTH-'] = feature.doorType.width
+    else:
+        print('Feature not supported in DRAW')
+        exit(0)
+    return wall_feature
+
+def get_building_wall_info(building_wall):
+    feature_info = {'-X POS-': building_wall.xPos,
+                    '-Y POS-': building_wall.yPos,
+                    '-FEATURE ANGLE-': building_wall.angle,
+                    '-FEATURE LENGTH-': building_wall.length,
+                   }
+    return feature_info
+
+def graph_draw_from_data(story, graph, feature_dict, x_pixel_ratio, folder, feature_images):
+    for wall in story.listOfWalls:
+        draw_wall_and_other(graph, folder, feature_images, wall, feature_dict, x_pixel_ratio)
+
+def draw_wall_and_other(graph, folder, feature_images, wall, feature_dict, x_pixel_ratio):
+    wall_info = get_building_wall_info(wall)
+    wall_info['-FEATURE-'] = 'Wall'
+    fig_id = draw_feature(graph, folder, feature_images, wall_info, x_pixel_ratio)
+    feature_dict[fig_id] = wall
+    door_info = {}
+    window_info = {}
+    door_info['-FEATURE-'] = 'Door'
+    window_info['-FEATURE-'] = 'Window'
+    for door in wall.listOfDoors:
+        door_info = get_feature_info(door, door_info, wall_info)
+        fig_id = draw_feature(graph, folder, feature_images, door_info, x_pixel_ratio)
+        feature_dict[fig_id] = door
+    for window in wall.listOfWindows:
+        window_info = get_feature_info(window, window_info, wall_info)
+        fig_id = draw_feature(graph, folder, feature_images, window_info, x_pixel_ratio)
+        feature_dict[fig_id] = window
+
+def draw_feature(graph, folder, feature_images, feature_info, x_pixel_ratio):
+    feature_size = int(feature_info['-FEATURE LENGTH-'] * x_pixel_ratio)
+    x = feature_info['-X POS-']
+    y = feature_info['-Y POS-']
+    rotate_angle = feature_info['-FEATURE ANGLE-']
+    shape = feature_size, feature_size
+    feature_path = os.path.join(folder, feature_images[feature_info['-FEATURE-']])
+    image_in = image_formating(feature_path, resize=shape)
+    feature = resize_img(image_in, shape)
+    feature = make_black(feature)
+    feature = feature.rotate(rotate_angle, fillcolor=(250, 150, 50), expand=True)
+    shift = get_distance_from_center(feature)
+
+    if rotate_angle % 90 != 0:
+        feature = make_transparent_edges(feature)
+
+    if feature_info['-FEATURE-'] in wall_objects:
+        x, y = get_coord(x, y, rotate_angle, feature_info['-DISTANCE-'] * x_pixel_ratio)
+
+    fig_id = graph.draw_image(data=convert_to_bytes(feature), location=(x - shift[0], y + shift[1]))
+    return fig_id
+
+def get_coord(x, y, rotate_angle, distance):
+    angle = math.radians(rotate_angle)
+    x_pos = math.cos(angle) * distance
+    y_pos = math.sin(angle) * distance
+    x += int(x_pos)
+    y += int(y_pos)
+    return x, y
+
+def get_distance_from_center(img):
+    return img.size[0] // 2, img.size[1] // 2
+
+def switch_to_other_graph(window, name1, graph1, name2, graph2, window_size):
+    graph1.set_size((0,0)) # This will free up the space for graph2
+    graph2.set_size(window_size)
+    window.refresh() # This must be refreshed before making anything invisible
+    window.Element(name1).Update(visible=False)
+    window.Element(name2).Update(visible=True)
+
 def main_gui():
     # --------------------------------- Define Layout ---------------------------------
     # Right click menu for graphs
     graph1_menu_def = ['&Right', ['Rotate', 'Set Distance']]
-    graph2_menu_def = ['&Right', ['Delete', 'Edit', 'Insert', 'Toggle']]
+    graph2_menu_def = ['&Right', ['Edit', 'Duplicate', 'Insert', 'Delete', 'Toggle']]
     # First is the top menu
-    menu_def = [['&File', ['&New       ALT-N', '&Save      ALT-S', 'E&xit']],
+    menu_def = [['&File', ['&New       ALT-N', '&Save      ALT-S', '&Load Recent', 'E&xit']],
                 ['&Edit', ['Extract Feature', '!Add Story']],
                 ['Se&ttings', ['&Window Settings', '!Help']]]
 
@@ -418,7 +511,7 @@ def main_gui():
                 [sg.Listbox(values=[], enable_events=True, size=(30,20),key='-FILE LIST-')],# This creates a listbox for the images in the folder
                 [sg.Button('add feature', key='-Feature-')], # This allows the features to be added to the converted blueprint
                 [sg.Button('Convert', key='-Convert-')],
-                [sg.Listbox(values=[], enable_events=True, size=(30,10),key='-STORY LIST-')],
+                [sg.Listbox(values=[], enable_events=True, size=(30,5),key='-STORY LIST-')],
                 [sg.Button('Export .ifc', key='-EXPORT IFC-')]]
 
     # Creates the column for the image
@@ -449,27 +542,18 @@ def main_gui():
               [sg.vtop(sg.Column(left_col, element_justification='c')), sg.VSeperator(),
                sg.Column(images_col, element_justification='c')]]
 
-    # -------------------------------- Get Monitor info --------------------------------
-    temp = sg.Window('', [[sg.Text('')]]).finalize()
-    root = tkinter.Tk()
-    temp.close()
-    window_width = root.winfo_screenwidth()
-    window_height = root.winfo_screenheight()
-    root.destroy()
-    # print('{}\n{}'.format(window_width, window_height))
     # --------------------------------- Create Window ---------------------------------
     window = sg.Window('Blueprint Conversion', layout, resizable=False).finalize()
     window.Maximize()
     window.Element('-STORY LIST-').Update(visible=False)
     window.Element('-GRAPH1-').Update(visible=False)
     window.Element('-GRAPH2-').Update(visible=False)
-    window.Element('-Convert-').Update(visible=False)
-    #window.Element('-EXPORT IFC-').Update(visible=False)
+    #window.Element('-Convert-').Update(visible=False)
+    window.Element('-EXPORT IFC-').Update(visible=False)
 
     # --------------------------------- Add feature objects ---------------------------
     story = 0
     buildingData = bd.BuildingData()
-    wall_objects = ('Door', 'Window')
     feature_images = {'Door':'door_right.gif', 'Wall':'wall.gif', 'Window':'window.gif'}
     available_features = ['Wall', 'Door', 'Window']
     feat_list_wall = ['Concrete', 'Wood', 'Plaster']
@@ -487,16 +571,15 @@ def main_gui():
     fnames = [f for f in file_list if os.path.isfile(
         os.path.join(folder, f)) and f.lower().endswith((".png", ".jpg", "jpeg", ".tiff", ".bmp", ".gif"))] # .gif supports transparency
     '''
-    window['-FILE LIST-'].update(available_features) # door_right.gif
+    window['-FILE LIST-'].update(available_features) # Add the list of available features
 
     # ----- Run the Event Loop -----
     graph1 = window["-GRAPH1-"]
-    #help(graph1)
-    #exit(0)
     graph1.bind('<Button-3>', '+RIGHT1+')
     graph2 = window["-GRAPH2-"]
     graph2.bind('<Button-3>', '+RIGHT2+')
     # --------------------------------- Initialize Variables------------------------
+    # sg.user_settings_delete_filename()
     if sg.user_settings_file_exists():
         settings = sg.UserSettings()
         width_percent = settings['-WIDTH PERCENT-']
@@ -509,12 +592,14 @@ def main_gui():
         settings['-HEIGHT PERCENT-']   = height_percent       = 0.94     # What percent of the window height is graph
         settings['-IMAGE PERCENT-']    = image_window_percent = 1.20     # Image scaling
         settings['-IMAGE RESOLUTION-'] = image_resolution     = 10000    # Blueprint original resolution
+
+    window_width, window_height = window.get_screen_dimensions()
     window_size = (window_width * width_percent, window_height * height_percent)
     dragging1 = dragging2 = crop = set_distance = extract_feature = False
     start_point = end_point = filename = feature_name = select_fig = img = None
     orig_img = a_set = bound_top = bound_bottom = fig = a_point = y_pixel_ratio = None
     x_pixel_ratio = feature_path = user_distance = prior_rect = start_point1 = None
-    end_point1 = graph2 = start_point2 = None
+    end_point1 = graph2 = start_point2 = data = new_size = None
     feature_dict = {}
     # --------------------------------- Event Loop ---------------------------------
     while True:
@@ -577,18 +662,21 @@ def main_gui():
             except Exception as E:
                 print('** Error {} **'.format(E)) # something weird happened making the full filename
         elif event == '-Convert-' and img is not None:    # There is a file to be converted
+            window.perform_long_operation(lambda :
+                              machine_learning_features(img, buildingData, x_pixel_ratio),
+                              '-LOADED EXTRACTION-')
             blueprint_2_image = copy.deepcopy(img)
             graph2 = window["-GRAPH2-"]  # type: sg.Graph
             graph2.set_size(window_size)
             graph2.change_coordinates((0,0), window_size)
-            horz_center = (window_size[1] - img.size[1]) // 2
             blueprint_2_ID = graph2.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
-            graph1.set_size((0,0)) # This will free up the space for graph2
-            window.refresh() # This must be refreshed before making anything invisible
-            window.Element('-GRAPH1-').Update(visible=False)
-            window.Element('-GRAPH2-').Update(visible=True)
+            switch_to_other_graph(window, '-GRAPH1-', graph1, '-GRAPH2-', graph2, window_size)
             window.Element('-Convert-').Update(visible=False)
             window.Element('-EXPORT IFC-').Update(visible=True)
+        elif event == "-LOADED EXTRACTION-":
+            popup_info('Blueprint feature extraction complete!')
+            graph_draw_from_data(buildingData.listOfStories[story], window['-GRAPH2-'],
+                                 feature_dict, x_pixel_ratio, folder, feature_images)
         elif event == "-GRAPH1-":  # if there's a "Graph" event, then it's a mouse
             x, y = values["-GRAPH1-"]
             if not dragging1:
@@ -666,9 +754,9 @@ def main_gui():
                         # feature selection gets sent to the feature extractor here
                         h = orig_img.size[0] / img.size[0]
                         v = orig_img.size[1] / img.size[1]
-                        feature_img = orig_img.crop((int(left*h), int(top*v), int(right*h), int(bottom*v)))
                         '''
                         # Used for trouble shooting
+                        feature_img = orig_img.crop((int(left*h), int(top*v), int(right*h), int(bottom*v)))
                         temp_img = resize_img(feature_img, (new_size, new_size))
                         graph1.erase()
                         graph1.set_size(temp_img.size)
@@ -684,14 +772,16 @@ def main_gui():
                         '''
                         if not feature_info:
                             popup_info('Feature information required for feature extraction')
-                        else:
-                            print('Extract Feature')
+                            continue
+                        # Extract features here
+                        # image, bounds, pixel_ratio, wall_string
+                        # return wall object with no wall type just a float
+                        top_left = int(left*h), int(top*v)
+                        bottom_right = int(right*h), int(bottom*v))
+                        # wall_object = 
+                        # Features extracted
                         graph1.delete_figure(prior_rect)
-                        graph1.set_size((0,0)) # This will free up the space for graph2
-                        graph2.set_size(window_size)
-                        window.refresh() # This must be refreshed before making anything invisible
-                        window.Element('-GRAPH1-').Update(visible=False)
-                        window.Element('-GRAPH2-').Update(visible=True)
+                        switch_to_other_graph(window, '-GRAPH1-', graph1, '-GRAPH2-', graph2, window_size)
                         extract_feature = False
                 elif set_distance:
                     if not a_set:
@@ -726,6 +816,10 @@ def main_gui():
                         graph1.delete_figure(a_point)
                         graph1.delete_figure(b_point)
                         if y_pixel_ratio and x_pixel_ratio:
+                            # Save
+                            settings['-X RATIO-'] = x_pixel_ratio
+                            settings['-Y RATIO-'] = y_pixel_ratio
+                            orig_img.save('./blueprint_features/save.png')
                             window.Element('-Convert-').Update(visible=True)
                         a_set = a_point = b_point = user_distance = None
                         set_distance = False
@@ -771,6 +865,11 @@ def main_gui():
             if select_fig is not None:
                 graph2.delete_figure(select_fig)
                 select_fig = None
+        elif  event == 'Duplicate':
+            if select_fig is None:
+                popup_info('No Feature selected')
+            else:
+                print('this works')
         elif  event == 'Edit':
             if select_fig is None:
                 popup_info('No Feature selected')
@@ -821,14 +920,9 @@ def main_gui():
                 continue
             set_distance = True
             popup_info('Select point A')
-        elif  event == 'Extract Feature' and graph2:
-            graph2.set_size((0,0)) # This will free up the space for graph2
-            graph1.set_size(window_size)
-            window.refresh() # This must be refreshed before making anything invisible
-            window.Element('-GRAPH1-').Update(visible=True)
-            window.Element('-GRAPH2-').Update(visible=False)
+        elif  event == 'Extract Feature' and graph2: # not set_distance
+            switch_to_other_graph(window, '-GRAPH2-', graph2, '-GRAPH1-', graph1, window_size)
             popup_info('Select the feature to be extracted')
-
             extract_feature = True
         elif  event == 'Toggle':
             if blueprint_2_ID:
@@ -871,10 +965,7 @@ def main_gui():
                 y_pixel_ratio = x_pixel_ratio = None
 
         elif  event == '-EXPORT IFC-':
-            # TODO Check for buildingData completeness
-            # if
             save_file = get_file_name()
-            buildingData = bd.testCode()
             window.perform_long_operation(lambda :
                               ifc.compile(buildingData, save_file),
                               '-EXPORT-')
@@ -884,6 +975,19 @@ def main_gui():
                 popup_info('Successfully Exported!')
                 continue
             popup_info('Export Failed!')
+        elif  event == 'Load Recent' and new_size and not graph2:
+            try:
+                orig_img = PIL.Image.open(r"./blueprint_features/save.png")
+                img = resize_img(orig_img, (new_size, new_size))
+                x_pixel_ratio = settings['-X RATIO-']
+                y_pixel_ratio = settings['-Y RATIO-']
+                window.Element('-Convert-').Update(visible=True)
+                graph1.erase()
+                graph1.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
+                if crop:
+                    crop = False
+            except Exception as E:
+                print('** Error {} **'.format(E))
 
     # --------------------------------- Close & Exit ---------------------------------
     window.close()

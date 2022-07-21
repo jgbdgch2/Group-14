@@ -430,7 +430,7 @@ class Wall:
         assert type(X) == type(0.0) and type(Y) == type(0.0), f"pos must be a tuple of floats, got {type(X)} and {type(Y)}."
         assert type(length) == type(0.0), f"length must be a type float, got type {type(length)}."
         assert type(angle) == type(0.0), f"angle must be type float, got type {type(angle)}."
-        assert type(wallType) == type(WallType()), f"wallType must be WallType object, got type {type(wallType)}."
+        #assert type(wallType) == type(WallType() or type(wallType) == type(0.0)), f"wallType must be WallType object, got type {type(wallType)}."
 
         self.xPos, self.yPos = pos
         self.length = length
@@ -602,24 +602,25 @@ def testCode():
 
 
     #South wall
-    buildingData.listOfStories[0].append(Wall(pos=(120.0, 4.0), length=240.0, angle=0.0,\
+    buildingData.listOfStories[0].append(Wall(pos=(1135.0, 1680.0), length=395.0, angle=145.0,\
                                             wallType=buildingData.buildingSchedule.searchByType(1)))
 
     #East wall
-    buildingData.listOfStories[0].append(Wall(pos=(4.0, 120.0), length=240.0, angle=90.0,\
+    buildingData.listOfStories[0].append(Wall(pos=(390.0, 935.0), length=395.0, angle=90.0,\
                                             wallType=buildingData.buildingSchedule.searchByType(1)))
 
     #North wall
-    buildingData.listOfStories[0].append(Wall(pos=(236.0, 120.0), length=240.0, angle=90.0,\
+    buildingData.listOfStories[0].append(Wall(pos=(1880.0, 935.0), length=395.0, angle=90.0,\
                                             wallType=buildingData.buildingSchedule.searchByType(1)))
 
     #West wall
-    buildingData.listOfStories[0].append(Wall(pos=(120.0, 236.0), length=240.0, angle=0.0, \
+    buildingData.listOfStories[0].append(Wall(pos=(1135.0, 190.0), length=395.0, angle=0.0, \
                                             wallType=buildingData.buildingSchedule.searchByType(1)))
+                                            # 4.227848101265823
+                                            # 1670
+    buildingData.listOfStories[0].listOfWalls[0].append(Door(position = 50.0, hingePos = 1, doorType = buildingData.buildingSchedule.searchByType(2)))
 
-    buildingData.listOfStories[0].listOfWalls[0].append(Door(position = 20.0, hingePos = 1, doorType = buildingData.buildingSchedule.searchByType(2)))
-
-    buildingData.listOfStories[0].listOfWalls[0].append(Window(position = -40.0, directionFacing = 0, windowType = buildingData.buildingSchedule.searchByType(3)))
+    buildingData.listOfStories[0].listOfWalls[0].append(Window(position = -100.0, directionFacing = 0, windowType = buildingData.buildingSchedule.searchByType(3)))
 
     #buildingData.findWallJoinsHelper()
 
