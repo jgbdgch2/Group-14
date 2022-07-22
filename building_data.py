@@ -459,6 +459,9 @@ class Door:
     doorType = -1
     typeNumber = 0
 
+    # Used by GUI to identify parent wall
+    parentID = -1
+
     #Str array of info about wall
     #Includes tags
     information = []
@@ -490,6 +493,9 @@ class Window:
     #Reference to WindowType object
     windowType = -1
     typeNumber = 0
+
+    # Used by GUI to identify parent wall
+    parentID = -1
 
     #Str array of info about wall
     #Includes tags
