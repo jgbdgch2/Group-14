@@ -792,11 +792,18 @@ def main_gui():
                             send_img = cv2.imread("./blueprint_features/save.png")
                         except Exception as E:
                             print('** Error {} **'.format(E))
-                        wall_object = mmd.feature_data_extractor(send_img,
+                        result = mmd.feature_data_extractor(send_img,
                                                                  bounding_box,
                                                                  x_pixel_ratio,
                                                                  feature_info['-FEATURE TYPE-'])
-                        print(wall_object)
+                        if result:
+                            wall_object, width = result
+                            print(wall_object)
+                            print(width)
+                            wall_type = bd.WallType(1, name=feature_info['-FEATURE NAME-'],
+                                                    thickness=width)
+                            wall_object.wallType = wall_type
+                            draw_wall_and_other(window['-GRAPH2-'], folder, feature_images, wall_object, feature_dict, x_pixel_ratio)
                         # Features extracted
                         graph1.delete_figure(prior_rect)
                         switch_to_other_graph(window, '-GRAPH1-', graph1, '-GRAPH2-', graph2, window_size)
