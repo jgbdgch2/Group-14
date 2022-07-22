@@ -255,7 +255,7 @@ def feature_data_extractor(im, bounding_box, pixelToInches, element_type):
         results = find_wall(im, bounding_box, pixelToInches)
         if results:
             center, length, angle, thickness = results
-            return building_data.Wall((center[0]/pixelToInches, center[1]/pixelToInches), length/pixelToInches, angle, thickness/pixelToInches)
+            return building_data.Wall((center[0]/pixelToInches, center[1]/pixelToInches), length/pixelToInches, angle), thickness/pixelToInches
     return None
 
 
