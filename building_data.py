@@ -410,6 +410,9 @@ class Wall:
     #TODO add support for this lmao
     height = np.inf
 
+    # Used by GUI to identify parent wall when children objects are created
+    parentID = -1
+
     #Str array of info about wall
     #Includes tags
     information = []

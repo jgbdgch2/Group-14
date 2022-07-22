@@ -443,17 +443,19 @@ def graph_draw_from_data(story, graph, feature_dict, pixel_ratio, folder, featur
 def draw_wall_and_other(graph, folder, feature_images, wall, feature_dict, pixel_ratio):
     wall_info = get_building_wall_info(wall)
     wall_info['-FEATURE-'] = 'Wall'
-    fig_id = draw_feature(graph, folder, feature_images, wall_info, pixel_ratio)
-    feature_dict[fig_id] = wall
+    wall_id = draw_feature(graph, folder, feature_images, wall_info, pixel_ratio)
+    feature_dict[wall_id] = wall
     door_info = {}
     window_info = {}
     door_info['-FEATURE-'] = 'Door'
     window_info['-FEATURE-'] = 'Window'
     for door in wall.listOfDoors:
+        door.parentID = wall_id
         door_info = get_feature_info(door, door_info, wall_info)
         fig_id = draw_feature(graph, folder, feature_images, door_info, pixel_ratio)
         feature_dict[fig_id] = door
     for window in wall.listOfWindows:
+        window.parentID = wall_id
         window_info = get_feature_info(window, window_info, wall_info)
         fig_id = draw_feature(graph, folder, feature_images, window_info, pixel_ratio)
         feature_dict[fig_id] = window
@@ -1014,8 +1016,8 @@ def main_gui():
                 graph2.change_coordinates((0,0), window_size)
                 blueprint_2_ID = graph2.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
                 switch_to_other_graph(window, '-GRAPH1-', graph1, '-GRAPH2-', graph2, window_size)
-                #window.Element('-Convert-').Update(visible=False)
-                #window.Element('-EXPORT IFC-').Update(visible=True)
+                window.Element('-Convert-').Update(visible=False)
+                window.Element('-EXPORT IFC-').Update(visible=True)
                 graph_draw_from_data(buildingData.listOfStories[story], graph2,
                                      feature_dict, x_pixel_ratio, folder, feature_images)
         elif  event == 'Quick Save':
