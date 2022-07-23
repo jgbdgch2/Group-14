@@ -18,13 +18,13 @@ import measurement_marker_detector as mmd
 
 wall_objects = ('Door', 'Window') # This doesn't change and is used throughout the GUI
 
-def create_feature(info_dict, buildingData, story_id):
-    type = info_dict['-FEATURE TYPE-']
+def create_feature(info_dict, buildingData, story_id, x, y, pixel_ratio):
+    type = info_dict['-FEATURE-']
     if type == 'Wall':
         # make a wall object
         wall_type = bd.WallType(1, name=info_dict['-FEATURE NAME-'],
                                 thickness=info_dict['-FEATURE WIDTH-'])
-        wall = bd.Wall(pos=(120.0, 4.0), length=info_dict['-FEATURE LENGTH-'],
+        wall = bd.Wall(pos=(x / pixel_ratio, y / pixel_ratio), length=info_dict['-FEATURE LENGTH-'],
                        angle=info_dict['-FEATURE ANGLE-'], wallType=wall_type)
         buildingData.listOfStories[story_id].append(wall)
         return wall
@@ -32,7 +32,7 @@ def create_feature(info_dict, buildingData, story_id):
         # make a door object
         door_type = bd.DoorType(typeNumber=1, name=info_dict['-FEATURE NAME-'],
                     height=1.0, width=info_dict['-FEATURE WIDTH-'])
-        door = bd.Door(position=1.5, hingePos=1, doorType=door_type)
+        door = bd.Door(position=info_dict['-FEATURE LENGTH-'], hingePos=1, doorType=door_type)
         wall_attach = info_dict['-Wall-']
         wall_attach.append(door)
         return door
@@ -40,7 +40,7 @@ def create_feature(info_dict, buildingData, story_id):
         # make a window object
         window_type = bd.WindowType(typeNumber=1, name=info_dict['-FEATURE NAME-'],
                                     height=1.0, sillHeight=1.0)
-        window = bd.Window(position=1.5, sillHeight=1.0, directionFacing=1,
+        window = bd.Window(position=info_dict['-FEATURE LENGTH-'], sillHeight=1.0, directionFacing=1,
                            windowType=window_type)
         wall_attach = info_dict['-Wall-']
         wall_attach.append(window)
@@ -1013,26 +1013,22 @@ def main_gui():
                 feature_info['-FEATURE ANGLE-'] = 0.0
             else:
                 feature_info['-FEATURE ANGLE-'] = float(feature_info['-FEATURE ANGLE-'])
-            feature_info['-FEATURE TYPE-'] = feature_name
+            feature_info['-FEATURE-'] = feature_name
             if feature_name in wall_objects:
-                feature_info['-Wall-'] = feature_dict[select_fig]
-            rotate_angle = float(feature_info['-FEATURE ANGLE-'])
-            feature_size = int(feature_info['-FEATURE LENGTH-'] * x_pixel_ratio)
-            shape = feature_size, feature_size
-            image_in = image_formating(feature_path, resize=shape)
-            feature = resize_img(image_in, shape)
-            feature = make_black(feature)
-            feature = feature.rotate(rotate_angle, fillcolor=(250, 150, 50), expand=True)
-            offset = get_distance_from_center(feature)
-            if rotate_angle % 90 != 0:
-                feature = make_transparent_edges(feature)
+                wall = feature_dict[select_fig]
+                wall_info = get_building_wall_info(wall)
+                wall_info['-FEATURE-'] = 'Wall'
+                feature_info['-Wall-'] = wall
             if event == "-Feature-":
-                x, y = get_distance_from_center(feature)
-            fig_id = graph2.draw_image(data=convert_to_bytes(feature), location=(x - offset[0], y + offset[1]))
-            feature = create_feature(feature_info, buildingData, story)
-            if select_fig and type(feature_dict[select_fig]) != type(bd.Wall()):
-                feature.parentID = select_fig
-            feature_dict[fig_id] = feature
+                x, y = window_width / 2, window_height / 2
+            feature_object = create_feature(feature_info, buildingData, story, x, y, x_pixel_ratio)
+            if feature_name in wall_objects:
+                feature_object.parentID = select_fig
+                feature_info = get_feature_info(feature_object, feature_info, wall_info)
+                fig_id = draw_feature(graph2, folder, feature_images, feature_info, x_pixel_ratio)
+                feature_dict[fig_id] = feature_object
+            else:
+                draw_wall_and_other(graph2, folder, feature_images, feature_object, feature_dict, x_pixel_ratio)
         elif  event == 'Rotate' and not graph2 and not crop:
             img = img.transpose(PIL.Image.ROTATE_90)
             graph1 = window["-GRAPH1-"]  # type: sg.Graph
