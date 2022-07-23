@@ -240,17 +240,21 @@ def get_pdf_as_image(new_size, filename, page_num):
 
 def convert_to_centimeters(str):
     value = []
+    mult = 1
+    if str[0] == '-':
+        str = str[1:]
+        mult = -1
     if str == '' or not str[0].isdigit() or not str[-1] in ('M', 'm'):
         return 0.0
     for char in str:
         if char.isdigit() or char == '.':
             value.append(char)
         elif str.endswith('MM') or str.endswith('mm'):
-            return float(''.join(value)) / 1000
+            return (float(''.join(value)) / 1000) * mult
         elif str.endswith('CM') or str.endswith('cm'):
-            return float(''.join(value))
+            return (float(''.join(value))) * mult
         elif str.endswith('M') or str.endswith('m'):
-            return float(''.join(value)) * 100
+            return (float(''.join(value)) * 100) * mult
         else:
             return 0.0
 
@@ -258,6 +262,11 @@ def convert_to_inches(str):
     feet = []
     inches = []
     is_feet = True
+    mult = 1
+    if str[0] == '-':
+        print('Made it')
+        str = str[1:]
+        mult = -1
     if str == '' or not str[0].isdigit():
         return 0.0
     if not "'" in str:
@@ -266,7 +275,7 @@ def convert_to_inches(str):
             return 0.0
     if str.endswith("'") and not '"' in str:
         if str[:-1].isdigit():
-            return float(str[:-1]) * 12
+            return (float(str[:-1]) * 12) * mult
     if str.endswith('"'):
         for char in str:
             if char.isdigit() and is_feet:
@@ -277,8 +286,8 @@ def convert_to_inches(str):
                 is_feet = False
             elif char == '"':
                 if len(feet) > 0:
-                    return float(''.join(feet)) * 12 + float(''.join(inches))
-                return float(''.join(inches))
+                    return (float(''.join(feet)) * 12 + float(''.join(inches))) * mult
+                return (float(''.join(inches))) * mult
     return 0.0
 
 def feature_extractor_window(available_features):
@@ -696,7 +705,6 @@ def main_gui():
         if event in (sg.WIN_CLOSED, 'Exit'): # Closes the App
             break
         if event == 'New       ALT-N': # Creates a new blueprint conversion environment
-            settings['-SAVE CONVERT-'] = False
             save_convert = False
             new_size = int(window_size[1] * image_window_percent)
             mult = image_resolution // new_size
