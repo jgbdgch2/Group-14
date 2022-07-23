@@ -555,7 +555,29 @@ def attachment_translate_along_wall(graph, feature_dict, delta_x, delta_y, fig_i
         else: # Angle is more vertical
             delta_x = delta_y / slope
         graph.move_figure(fig_id, delta_x, delta_y)
-        return math.dist([wall.xPos * pixel_ratio, wall.yPos * pixel_ratio], [center[0], center[1]])
+        center = get_center_coordinates(graph, fig_id)
+        x_positive = center[0] - wall.xPos * pixel_ratio
+        y_positive = center[1] - wall.yPos * pixel_ratio
+        final_distance = math.dist([wall.xPos * pixel_ratio, wall.yPos * pixel_ratio], [center[0], center[1]])
+        if x_positive > 0:
+            x_positive = True
+        else:
+            x_positive = False
+        if y_positive > 0:
+            y_positive = True
+        else:
+            y_positive = False
+
+        #-----------------------
+        if x_positive and (angle < 270 or angle > 90):
+            final_distance *= -1
+        elif not x_positive and (angle < 90 or angle > 270):
+            final_distance *= -1
+        elif not y_positive and angle == 90:
+            final_distance *= -1
+        elif y_positive and angle == 270:
+            final_distance *= -1
+        return final_distance
 
 def main_gui():
     # --------------------------------- Define Layout ---------------------------------
