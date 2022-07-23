@@ -35,6 +35,7 @@ def create_feature(info_dict, buildingData, story_id):
         door = bd.Door(position=1.5, hingePos=1, doorType=door_type)
         wall_attach = info_dict['-Wall-']
         wall_attach.append(door)
+        return door
     elif type == 'Window':
         # make a window object
         window_type = bd.WindowType(typeNumber=1, name=info_dict['-FEATURE NAME-'],
@@ -43,6 +44,7 @@ def create_feature(info_dict, buildingData, story_id):
                            windowType=window_type)
         wall_attach = info_dict['-Wall-']
         wall_attach.append(window)
+        return window
 
 def make_black(image):
     image = image.convert('RGBA')
@@ -494,12 +496,66 @@ def get_coord(x, y, rotate_angle, distance):
 def get_distance_from_center(img):
     return img.size[0] // 2, img.size[1] // 2
 
+def get_center_coordinates(graph, fig_id):
+    top_left, bottom_right = graph.get_bounding_box(fig_id)
+    distance = (bottom_right[0] - top_left[0])/2, (top_left[1] - bottom_right[1])/2
+    return top_left[0] + distance[0], top_left[1] - distance[1]
+
 def switch_to_other_graph(window, name1, graph1, name2, graph2, window_size):
     graph1.set_size((0,0)) # This will free up the space for graph2
     graph2.set_size(window_size)
     window.refresh() # This must be refreshed before making anything invisible
     window.Element(name1).Update(visible=False)
     window.Element(name2).Update(visible=True)
+
+def delete_wall(graph, feature_dict, wall_id, list_of_walls):
+    wall = feature_dict[wall_id]
+    for door in wall.listOfDoors:
+        delete_wall_attachment(graph, feature_dict, door, wall.listOfDoors)
+    for window in wall.listOfWindows:
+        delete_wall_attachment(graph, feature_dict, window, wall.listOfWindows)
+    graph.delete_figure(wall_id)
+    feature_dict.pop(wall_id)
+    del list_of_walls[list_of_walls.index(wall)]
+
+def delete_wall_attachment(graph, feature_dict, attachment, list_attachment):
+    feature_ID = [k for k, v in feature_dict.items() if v == attachment]
+    if len(feature_ID) == 1:
+        feature_ID = feature_ID[0]
+    else:
+        print('Something went wrong deleting')
+        exit(0)
+    graph.delete_figure(feature_ID)
+    feature_dict.pop(feature_ID)
+    del list_attachment[list_attachment.index(attachment)]
+
+def attachment_translate_with_wall(graph, feature_dict, delta_x, delta_y, wall_id):
+    # Get all the feature IDs from any attachments with the parent ID of the wall
+    feature_IDs = [k for k, v in feature_dict.items() if (type(v) == type(bd.Door()) or
+                                                          type(v) == type(bd.Window()))
+                                                          and v.parentID == wall_id]
+    for fig_id in feature_IDs:
+        graph.BringFigureToFront(fig_id)
+        graph.move_figure(fig_id, delta_x, delta_y)
+
+def attachment_translate_along_wall(graph, feature_dict, delta_x, delta_y, fig_id, pixel_ratio):
+        feature = feature_dict[fig_id]
+        wall = feature_dict[feature.parentID]
+        angle = wall.angle % 360
+        rotate_angle = math.radians(angle)
+        slope = math.tan(rotate_angle)
+        center = get_center_coordinates(graph, fig_id)
+        pos = center[0] + delta_x, center[1] + delta_y
+        distance = math.dist([wall.xPos * pixel_ratio, wall.yPos * pixel_ratio], [pos[0], pos[1]])
+        if distance >= wall.length / 2 * pixel_ratio:
+            return
+        if (angle <= 225 and angle >= 135) or (angle <= 45 and angle >= 0) or \
+            (angle <= 360 and angle >= 315): # Angle is more horizontal
+            delta_y = slope * delta_x
+        else: # Angle is more vertical
+            delta_x = delta_y / slope
+        graph.move_figure(fig_id, delta_x, delta_y)
+        return math.dist([wall.xPos * pixel_ratio, wall.yPos * pixel_ratio], [center[0], center[1]])
 
 def main_gui():
     # --------------------------------- Define Layout ---------------------------------
@@ -708,6 +764,7 @@ def main_gui():
             else:
                 end_point2 = (x, y)
             delta_x, delta_y = x - last2xy[0], y - last2xy[1]
+            prev_x, prev_y = last2xy
             last2xy = x,y
             if len(drag_figures) > 0:
                 select_fig = drag_figures[-1] # This will always be the figure on top
@@ -717,7 +774,17 @@ def main_gui():
                 select_fig = None
             if select_fig is not None:
                 graph2.BringFigureToFront(select_fig) # when dragging a feature bring it to front of all others not selected
-                graph2.move_figure(select_fig, delta_x, delta_y)
+                feature = feature_dict[select_fig]
+                if type(feature) == type(bd.Wall()): # Walls need there features moved up
+                    graph2.move_figure(select_fig, delta_x, delta_y)
+                    attachment_translate_with_wall(graph2, feature_dict, delta_x, delta_y, select_fig)
+                    center = get_center_coordinates(graph2, select_fig)
+                    feature.xPos = center[0] / x_pixel_ratio
+                    feature.yPos = center[1] / x_pixel_ratio
+                elif type(feature) == type(bd.Door()) or type(feature) == type(bd.Window()):
+                    distance = attachment_translate_along_wall(graph2, feature_dict, delta_x, delta_y, select_fig, x_pixel_ratio)
+                    if distance:
+                        feature.position = distance / x_pixel_ratio
                 graph2.update()
         elif event.endswith('+UP'):  # The dragging has ended because mouse up
             if dragging1:
@@ -841,7 +908,6 @@ def main_gui():
                         graph1.delete_figure(a_point)
                         graph1.delete_figure(b_point)
                         if y_pixel_ratio and x_pixel_ratio:
-                            # Save
                             window.Element('-Convert-').Update(visible=True)
                         a_set = a_point = b_point = user_distance = None
                         set_distance = False
@@ -885,7 +951,20 @@ def main_gui():
                 bound_bottom = graph2.DrawCircle(bounds[1], 7, line_color='black', fill_color='white')
         elif  event == 'Delete':
             if select_fig is not None:
-                graph2.delete_figure(select_fig)
+                if type(feature_dict[select_fig]) == type(bd.Wall()):
+                    list_of_walls = buildingData.listOfStories[story].listOfWalls
+                    delete_wall(graph2, feature_dict, select_fig, list_of_walls)
+                else:
+                    attachment = feature_dict[select_fig]
+                    parentID = attachment.parentID
+                    parent = feature_dict[parentID] # This will be the wall object
+                    if type(attachment) == type(bd.Door()):
+                        list = parent.listOfDoors
+                    elif type(attachment) == type(bd.Window()):
+                        list = parent.listOfWindows
+                    else:
+                        print('Type not supported for delete')
+                    delete_wall_attachment(graph2, feature_dict, attachment, list)
                 select_fig = None
         elif  event == 'Duplicate':
             if select_fig is None:
@@ -908,7 +987,7 @@ def main_gui():
                 or feature_info['-FEATURE WIDTH-'] == 0):
                 popup_info('Feature Length and Width Required')
                 continue
-            if feature_info['-FEATURE ANGLE-'] == '':
+            if feature_info['-FEATURE ANGLE-'] == '' or not feature_info['-FEATURE ANGLE-'].isdigit():
                 feature_info['-FEATURE ANGLE-'] = 0.0
             else:
                 feature_info['-FEATURE ANGLE-'] = float(feature_info['-FEATURE ANGLE-'])
@@ -922,13 +1001,16 @@ def main_gui():
             feature = resize_img(image_in, shape)
             feature = make_black(feature)
             feature = feature.rotate(rotate_angle, fillcolor=(250, 150, 50), expand=True)
+            offset = get_distance_from_center(feature)
             if rotate_angle % 90 != 0:
                 feature = make_transparent_edges(feature)
-            if event == 'Insert':
-                fig_id = graph2.draw_image(data=convert_to_bytes(feature), location=(x, y))
-            else:
-                fig_id = graph2.draw_image(data=convert_to_bytes(feature), location=(300, feature.size[1]))
-            feature_dict[fig_id] = create_feature(feature_info, buildingData, story)
+            if event == "-Feature-":
+                x, y = get_distance_from_center(feature)
+            fig_id = graph2.draw_image(data=convert_to_bytes(feature), location=(x - offset[0], y + offset[1]))
+            feature = create_feature(feature_info, buildingData, story)
+            if select_fig and type(feature_dict[select_fig]) != type(bd.Wall()):
+                feature.parentID = select_fig
+            feature_dict[fig_id] = feature
         elif  event == 'Rotate' and not graph2 and not crop:
             img = img.transpose(PIL.Image.ROTATE_90)
             graph1 = window["-GRAPH1-"]  # type: sg.Graph
