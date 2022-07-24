@@ -1073,19 +1073,17 @@ def main_gui():
                                                                      feature_info['-FEATURE TYPE-'])
                         except:
                             result = None
+                        # Features extracted
+                        graph1.delete_figure(prior_rect)
+                        switch_to_other_graph(window, '-GRAPH1-', graph1, '-GRAPH2-', graph2, window_size)
+                        extract_feature = False
                         if result:
                             wall_object, width = result
-                            print(wall_object)
-                            print(width)
                             wall_type = bd.WallType(1, name=feature_info['-FEATURE NAME-'],
                                                     thickness=width)
                             wall_object.wallType = wall_type
                             draw_wall_and_attachments(window['-GRAPH2-'], folder, feature_images,
                                                 wall_object, x_pixel_ratio, feature_dict=feature_dict)
-                        # Features extracted
-                        graph1.delete_figure(prior_rect)
-                        switch_to_other_graph(window, '-GRAPH1-', graph1, '-GRAPH2-', graph2, window_size)
-                        extract_feature = False
                 elif set_distance:
                     if not a_set:
                         a_set = end_point1
