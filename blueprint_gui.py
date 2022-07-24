@@ -423,7 +423,9 @@ def get_window_settings(settings):
     return values
 
 def machine_learning_features(img, buildingData, y_pixel_ratio): # Testing code for machine learning extraction
-    data = bd.testCode()
+    data = mmd.machine_learning_feature_data_extractor(img, y_pixel_ratio)
+    if data == None:
+        return buildingData
     for wall in data.listOfStories[0].listOfWalls:
         buildingData.listOfStories[0].append(wall)
     return buildingData

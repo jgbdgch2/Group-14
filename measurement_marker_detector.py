@@ -101,6 +101,9 @@ def point_segment_distance(px, py, x1, y1, x2, y2):
 def calculate_center(max_line, smaller_line, minx, miny):
     x11, y11, x12, y12 = max_line
     x21, y21, x22, y22 = smaller_line
+    
+    if True:
+        return ((x11+x12+x21+x22)/4,(y11+y12+y21+y22)/4)
 
     #start with the center of the larger line
     center = (x11+x12/2, y11+y12/2)
@@ -124,12 +127,6 @@ def bind_lines(max_line, smaller_line):
     x21, y21, x22, y22 = smaller_line
     x11new, y11new, x12new, y12new = find_a_prime_b_prime((x21, y21), (x22, y22), ((x11+x12)/2, (y11+y12)/2))
     x21new, y21new, x22new, y22new = find_a_prime_b_prime((x11, y11), (x12, y12), ((x21+x22)/2, (y21+y22)/2))
-    
-    #TODO delete
-    print(x11, y11, x12, y12)
-    print(x21, y21, x22, y22)
-    print(x11new, y11new, x12new, y12new)
-    print(x21new, y21new, x22new, y22new)
     
     if measure_line((x11, y11, x11+x12/2, y11+y12/2)) < measure_line((x11new, y11new, x11+x12/2, y11+y12/2)):
         x11new = x11
@@ -161,15 +158,23 @@ def find_a_prime_b_prime(point1, point2, point3):
     xa, ya = point1
     xb, yb = point2
     xc, yc = point3
-    A = yb - ya
-    B = xa - xb
-    C = xb * ya - xa * yb
-    Cprime = yc * (xb - xa) + xc * (ya - yb)
+    #I need the arbitrary precision of standard python ints
+    #NumPy gives me overflow errors
+    xa = int(xa)
+    ya = int(ya)
+    xb = int(xb)
+    yb = int(yb)
+    xc = int(xc)
+    yc = int(yc)
+    A = int(yb - ya)
+    B = int(xa - xb)
+    C = int(xb * ya - xa * yb)
+    Cprime = int((yc * (xb - xa)) + (xc * (ya - yb)))
     
-    xprimea = int(((B**2)*xa - A*(B * ya + Cprime)) / (A**2 + B**2))
-    yprimea = int(((A**2)*ya - B*(A * xa + Cprime)) / (A**2 + B**2))
-    xprimeb = int(((B**2)*xb - A*(B * yb + Cprime)) / (A**2 + B**2))
-    yprimeb = int(((A**2)*yb - B*(A * xb + Cprime)) / (A**2 + B**2))
+    xprimea = int(((B**2)*xa - A*((B * ya) + Cprime)) / (A**2 + B**2))
+    yprimea = int(((A**2)*ya - B*((A * xa) + Cprime)) / (A**2 + B**2))
+    xprimeb = int(((B**2)*xb - A*((B * yb) + Cprime)) / (A**2 + B**2))
+    yprimeb = int(((A**2)*yb - B*((A * xb) + Cprime)) / (A**2 + B**2))
     
     return xprimea, yprimea, xprimeb, yprimeb
     
@@ -287,8 +292,6 @@ def find_wall(full_image, bounding_box, pixelToInches):
 
     if np.array_equiv(max_line, (0, 0, 0, 0)):
         return None
-        
-    print("Max line found", max_line)
 
     #locates the longest line parallel to max_line
     smaller_line = (0, 0, 0, 0)
@@ -310,7 +313,7 @@ def find_wall(full_image, bounding_box, pixelToInches):
     #print(find_line_angle((0,10,0,0)))
     #print(find_line_angle((0,10,1,0)))
     #print(max_line, smaller_line)
-    print("wall detected")
+    #print("wall detected")
     
     max_line, smaller_line = bind_lines(max_line, smaller_line)
     
@@ -337,10 +340,11 @@ def machine_learning_feature_data_extractor(im, pixelToInches):
     '''
 def feature_data_extractor(im, bounding_box, pixelToInches, element_type):
     #TODO REMOVE
-    print("bounding box is", bounding_box, "image size is", len(im[0]), len(im), "reload worked")
-    print("pixeltoinches =", pixelToInches)
-    pixelToInches = 2
+    #print("bounding box is", bounding_box, "image size is", len(im[0]), len(im), "reload worked")
+    #print("pixeltoinches =", pixelToInches)
+    #pixelToInches = 2
     if element_type == "Wall":
+        print("\n------------------------------------------------\n")
         results = find_wall(im, bounding_box, pixelToInches)
         if results:
             center, length, angle, thickness = results
