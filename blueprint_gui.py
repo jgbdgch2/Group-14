@@ -1062,14 +1062,14 @@ def main_gui():
                         try:
                             send_img = cv2.imread("./blueprint_features/save.png")
                         except Exception as E:
-                            print('** Error {} **'.format(E))  
+                            print('** Error {} **'.format(E))
                         #Will added this
                         #Allows me to modify wall detector without reloading blueprint_gui.py
                         importlib.reload(mmd)
                         try:
                             result = mmd.feature_data_extractor(send_img,
                                                                      bounding_box,
-                                                                     x_pixel_ratio,
+                                                                     x_pixel_ratio * h,
                                                                      feature_info['-FEATURE TYPE-'])
                         except:
                             result = None
