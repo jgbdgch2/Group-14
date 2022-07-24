@@ -16,6 +16,9 @@ import building_data as bd
 import ifc_compiler as ifc
 import measurement_marker_detector as mmd
 
+#Will added this
+import importlib
+
 wall_objects = ('Door', 'Window') # This doesn't change and is used throughout the GUI
 
 def create_feature(info_dict, buildingData, story_id, x, y, pixel_ratio):
@@ -235,7 +238,7 @@ def get_pdf_as_image(new_size, filename, page_num):
                     break
     except Exception as E:
         print('** Error {} **'.format(E))# get file popup was cancelled
-    os.remove(zip_folder)
+        os.remove(zip_folder)
     return temp_image
 
 def convert_to_centimeters(str):
@@ -568,7 +571,9 @@ def get_window_settings(settings):
     return values
 
 def machine_learning_features(img, buildingData, y_pixel_ratio): # Testing code for machine learning extraction
-    data = bd.testCode()
+    data = mmd.machine_learning_feature_data_extractor(img, y_pixel_ratio)
+    if data == None:
+        return buildingData
     for wall in data.listOfStories[0].listOfWalls:
         buildingData.listOfStories[0].append(wall)
     return buildingData
@@ -1057,11 +1062,17 @@ def main_gui():
                         try:
                             send_img = cv2.imread("./blueprint_features/save.png")
                         except Exception as E:
-                            print('** Error {} **'.format(E))
-                        result = mmd.feature_data_extractor(send_img,
-                                                                 bounding_box,
-                                                                 x_pixel_ratio * h,
-                                                                 feature_info['-FEATURE TYPE-'])
+                            print('** Error {} **'.format(E))  
+                        #Will added this
+                        #Allows me to modify wall detector without reloading blueprint_gui.py
+                        importlib.reload(mmd)
+                        try:
+                            result = mmd.feature_data_extractor(send_img,
+                                                                     bounding_box,
+                                                                     x_pixel_ratio,
+                                                                     feature_info['-FEATURE TYPE-'])
+                        except:
+                            result = None
                         if result:
                             wall_object, width = result
                             print(wall_object)
