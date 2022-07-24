@@ -529,10 +529,15 @@ def edit_blueprint_wall(feature, pixel_ratio):
     else:
         values['-Y POS-'] = convert_to_inches(values['-Y POS-'])
         values['-Y POS-'] /= pixel_ratio
+    values['-FEATURE ANGLE-'] = float(values['-FEATURE ANGLE-'])
     return values
 
 def update_wall(wall, wall_info):
-    pass
+    wall.length = wall_info['-FEATURE LENGTH-']
+    wall.wallType.width = wall_info['-FEATURE WIDTH-']
+    wall.xPos = wall_info['-X POS-']
+    wall.yPos = wall_info['-Y POS-']
+    wall.angle = wall_info['-FEATURE ANGLE-']
 
 def get_window_settings(settings):
     layout = [[sg.Text('Window Width Percent:', size =(20, 1))],
@@ -682,6 +687,7 @@ def erase_wall_attachment(graph, feature_dict, attachment, list_attachment):
         print('Something went wrong deleting')
         exit(0)
     graph.delete_figure(feature_ID)
+    feature_dict.pop(feature_ID)
 
 def erase_wall(graph, feature_dict, wall_id):
     wall = feature_dict[wall_id]
@@ -690,6 +696,7 @@ def erase_wall(graph, feature_dict, wall_id):
     for window in wall.listOfWindows:
         erase_wall_attachment(graph, feature_dict, window, wall.listOfWindows)
     graph.delete_figure(wall_id)
+    feature_dict.pop(wall_id)
 
 def delete_wall(graph, feature_dict, wall_id, list_of_walls):
     wall = feature_dict[wall_id]
@@ -1185,11 +1192,12 @@ def main_gui():
                 popup_info('No Feature selected')
                 continue
             if type(feature_dict[select_fig]) == type(bd.Wall()):
+                wall = feature_dict[select_fig]
                 new_info = edit_blueprint_wall(feature_dict[select_fig], x_pixel_ratio)
                 update_wall(feature_dict[select_fig], new_info)
                 erase_wall(graph2, feature_dict, select_fig)
                 draw_wall_and_attachments(window['-GRAPH2-'], folder, feature_images,
-                                    feature_dict[select_fig], x_pixel_ratio)
+                                    wall, x_pixel_ratio, feature_dict=feature_dict)
         elif event in ('Insert', "-Feature-") and graph2 and feature_name:
             # Get the user input for the object by creating another window
             # Returns a dictionary of strings (if a key is not used: in list format)
