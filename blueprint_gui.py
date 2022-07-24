@@ -1089,6 +1089,7 @@ def main_gui():
                             wall_type = bd.WallType(1, name=feature_info['-FEATURE NAME-'],
                                                     thickness=width)
                             wall_object.wallType = wall_type
+                            buildingData.listOfStories[story].append(wall_object)
                             draw_wall_and_attachments(window['-GRAPH2-'], folder, feature_images,
                                                 wall_object, x_pixel_ratio, feature_dict=feature_dict)
                 elif set_distance:
