@@ -3,6 +3,7 @@ import numpy as np
 import math
 import opencv_text_detection_image as text_detect
 import building_data
+#import test_frcnn_modified
 
 # returns length of line in pixels
 def measure_line(points):
@@ -36,7 +37,7 @@ def compare_line_angle(angle1, angle2):
     if angle1 < 0.0:
         angle1 = angle1 + 180.0
     if angle2 < 0.0:
-        angl2 = angle2 + 180.0
+        angle2 = angle2 + 180.0
     return abs(angle1 - angle2)
 
 #https://stackoverflow.com/questions/2824478/shortest-distance-between-two-line-segments
@@ -117,7 +118,61 @@ def calculate_center(max_line, smaller_line, minx, miny):
     if distance_1 < distance_2:
         return (float(center_option_1[0] + minx), float(center_option_1[1] + miny))
     return (float(center_option_2[0] + minx), float(center_option_2[1] + miny))
-
+    
+def bind_lines(max_line, smaller_line):
+    x11, y11, x12, y12 = max_line
+    x21, y21, x22, y22 = smaller_line
+    x11new, y11new, x12new, y12new = find_a_prime_b_prime((x21, y21), (x22, y22), ((x11+x12)/2, (y11+y12)/2))
+    x21new, y21new, x22new, y22new = find_a_prime_b_prime((x11, y11), (x12, y12), ((x21+x22)/2, (y21+y22)/2))
+    
+    #TODO delete
+    print(x11, y11, x12, y12)
+    print(x21, y21, x22, y22)
+    print(x11new, y11new, x12new, y12new)
+    print(x21new, y21new, x22new, y22new)
+    
+    if measure_line((x11, y11, x11+x12/2, y11+y12/2)) < measure_line((x11new, y11new, x11+x12/2, y11+y12/2)):
+        x11new = x11
+        y11new = y11
+        
+    if measure_line((x12, y12, x11+x12/2, y11+y12/2)) < measure_line((x12new, y12new, x11+x12/2, y11+y12/2)):
+        x12new = x12
+        y12new = y12
+        
+    if measure_line((x21, y21, x21+x22/2, y21+y22/2)) < measure_line((x21new, y21new, x21+x22/2, y21+y22/2)):
+        x21new = x21
+        y21new = y21
+        
+    if measure_line((x22, y22, x21+x22/2, y21+y22/2)) < measure_line((x22new, y22new, x21+x22/2, y21+y22/2)):
+        x22new = x22
+        y22new = y22
+        
+    max_line_new = (x11new, y11new, x12new, y12new)
+    smaller_line_new = (x21new, y21new, x22new, y22new)
+    
+    #TODO DELETE
+    #print(max_line_new)
+    #print(smaller_line_new)
+    
+    return max_line_new, smaller_line_new
+#implementation of an algorithm defined here
+#https://math.stackexchange.com/questions/1450858/get-a-line-segment-on-the-line-parallel-to-another-line-segment
+def find_a_prime_b_prime(point1, point2, point3):
+    xa, ya = point1
+    xb, yb = point2
+    xc, yc = point3
+    A = yb - ya
+    B = xa - xb
+    C = xb * ya - xa * yb
+    Cprime = yc * (xb - xa) + xc * (ya - yb)
+    
+    xprimea = int(((B**2)*xa - A*(B * ya + Cprime)) / (A**2 + B**2))
+    yprimea = int(((A**2)*ya - B*(A * xa + Cprime)) / (A**2 + B**2))
+    xprimeb = int(((B**2)*xb - A*(B * yb + Cprime)) / (A**2 + B**2))
+    yprimeb = int(((A**2)*yb - B*(A * xb + Cprime)) / (A**2 + B**2))
+    
+    return xprimea, yprimea, xprimeb, yprimeb
+    
 def pol2cart(rho, phi):
     x = rho * np.cos(phi)
     y = rho * np.sin(phi)
@@ -179,7 +234,9 @@ def find_measurement_marker(file_name):
     return max_line
 
 def find_wall(full_image, bounding_box, pixelToInches):
-
+    
+    cv2.imwrite('full_image.png',full_image)
+    
     #guarantees we know where the bottom left corner of the bounding box is,
     #incase the wrong 2 corners are passed
     boundingx1, boundingy1 = bounding_box[0]
@@ -195,72 +252,108 @@ def find_wall(full_image, bounding_box, pixelToInches):
     edges = cv2.Canny(gray,50,150,apertureSize=3)
 
     #find lines
+    lines = None
     lines = cv2.HoughLinesP(
                 edges, # Input edge image
                 .1, # Value of < 1 seems to work best
                 np.pi/180, # Angle resolution in radians
                 threshold=50, # Min number of votes for valid line
                 minLineLength=10, # Min allowed length of line
-                maxLineGap=100 #TODO: update to be the span of the largest window or door, 2m default
+                maxLineGap=100*pixelToInches #TODO: update to be the span of the largest window or door, 2m default
                 )
-
+                
+    try:
+        if lines == None:
+            return None
+    except:
+        None
+        
+    #TODO delete
+    #draw lines on image. used for testing
+    for points in lines:
+        x1,y1,x2,y2=points[0]
+        cv2.line(image,(x1,y1),(x2,y2),(0,255,0),2)
+    #for testing
+    #print(smaller_line)
+    #cv2.line(image,(smaller_line[0],smaller_line[1]),(smaller_line[2],smaller_line[3]),(255,0,255),2)
+    cv2.imwrite('detectedLines.png',image)
+        
+    #TODO put this in a loop that breaks when it finds a max line and a suitable paralell line
     #returns longest line found
     max_line = (0, 0, 0, 0)
     for points in lines:
         max_line = compare_lines(points[0], max_line)
+        find_line_angle(points[0])
 
     if np.array_equiv(max_line, (0, 0, 0, 0)):
         return None
+        
+    print("Max line found", max_line)
 
     #locates the longest line parallel to max_line
     smaller_line = (0, 0, 0, 0)
     for points in lines:
-        if np.array_equiv(points, max_line):
+        if np.array_equiv(points[0], max_line):
             continue
         if compare_line_angle(find_line_angle(points[0]), find_line_angle(max_line)) > 2.0:
+            continue
+        if segments_distance(points[0], max_line) < 5 * pixelToInches:
             continue
         smaller_line = compare_lines(points[0], smaller_line)
 
     if np.array_equiv(smaller_line, (0, 0, 0, 0)):
         return None
 
-    #draw lines on image. used for testing
-    #for points in lines:
-        #x1,y1,x2,y2=points[0]
-        #cv2.line(image,(x1,y1),(x2,y2),(0,255,0),2)
-    #for testing
-    #print(smaller_line)
-    #cv2.line(image,(smaller_line[0],smaller_line[1]),(smaller_line[2],smaller_line[3]),(255,0,255),2)
-    #cv2.imwrite('detectedLines.png',image)
-
-    #delete this
+    #TODO delete this
     #print("distacnce is", segments_distance(max_line, smaller_line))
     #print(find_line_angle((0,0,10,0)))
     #print(find_line_angle((0,10,0,0)))
     #print(find_line_angle((0,10,1,0)))
-    print(max_line, smaller_line)
-
+    #print(max_line, smaller_line)
+    print("wall detected")
+    
+    max_line, smaller_line = bind_lines(max_line, smaller_line)
+    
+    #TODO DELETE
+    cv2.line(image,(max_line[0],max_line[1]),(max_line[2],max_line[3]),(255,0,255),2)
+    cv2.line(image,(smaller_line[0],smaller_line[1]),(smaller_line[2],smaller_line[3]),(255,0,255),2)
+    #for testing
+    #print(smaller_line)
+    #cv2.line(image,(smaller_line[0],smaller_line[1]),(smaller_line[2],smaller_line[3]),(255,0,255),2)
+    cv2.imwrite('detectedLines.png',image)
+    
+    
     return calculate_center(max_line, smaller_line, minx, miny), float(measure_line(max_line)), find_line_angle(max_line), segments_distance(max_line, smaller_line)
 
 def machine_learning_feature_data_extractor(im, pixelToInches):
     elements = []
-    bounding_boxes = stephanie_function(im)
+    #bounding_boxes = test_frcnn_modified.test(im)
+    #print(bounding_boxes)
+    '''
     for box in bounding_boxes:
         if box.label == "wall":
             elements.append(feature_data_extractor(im, box.bounding, pixelToInches))
     return elements
-
+    '''
 def feature_data_extractor(im, bounding_box, pixelToInches, element_type):
+    #TODO REMOVE
+    print("bounding box is", bounding_box, "image size is", len(im[0]), len(im), "reload worked")
+    print("pixeltoinches =", pixelToInches)
+    pixelToInches = 2
     if element_type == "Wall":
         results = find_wall(im, bounding_box, pixelToInches)
         if results:
             center, length, angle, thickness = results
+            #TODO REMOVE
+            print((center[0], center[1]), length, thickness)
             return building_data.Wall((center[0]/pixelToInches, center[1]/pixelToInches), length/pixelToInches, angle), thickness/pixelToInches
     return None
 
+#print(find_a_prime_b_prime((10, 20), (35, 7), (12, 10)))
+#image = cv2.imread("wall-with-door.png")
+#points = ((0,0), (len(image[0]-1),len(image)-1))
+#wall = feature_data_extractor(image, points, 2.4, "Wall")
 
-'''image = cv2.imread("wall-with-door.png")
-points = ((0,0), (len(image[0]-1),len(image)-1))
-wall = feature_data_extractor(image, points, 1.0, "Wall")
+#print(wall.getPos())
 
-print(wall.getPos())'''
+#machine_learning_feature_data_extractor(cv2.imread("full_image.png"), 1.0, )
