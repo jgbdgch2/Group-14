@@ -325,6 +325,8 @@ def find_wall(full_image, bounding_box, pixelToInches):
     #cv2.line(image,(smaller_line[0],smaller_line[1]),(smaller_line[2],smaller_line[3]),(255,0,255),2)
     cv2.imwrite('detectedLines.png',image)
     
+    center = calculate_center(max_line, smaller_line, minx, miny)
+    center = (center[1], len(full_image) - center[0])
     
     return calculate_center(max_line, smaller_line, minx, miny), float(measure_line(max_line)), find_line_angle(max_line), segments_distance(max_line, smaller_line)
 
