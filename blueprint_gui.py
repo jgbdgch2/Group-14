@@ -267,7 +267,6 @@ def convert_to_inches(str):
     is_feet = True
     mult = 1
     if str[0] == '-':
-        print('Made it')
         str = str[1:]
         mult = -1
     if str == '' or not str[0].isdigit():
@@ -448,6 +447,118 @@ def feature_input_window(feat_list, feature_name):
         values['-FEATURE WIDTH-'] = convert_to_inches(values['-FEATURE WIDTH-'])
     return values
 
+def edit_blueprint_wall_attachment(feature, pixel_ratio, wall_info):
+    attachment_info = {}
+    if type(feature) == type(bd.Door()):
+        attachment_info['-FEATURE-'] = 'Door'
+    elif type(feature) == type(bd.Window()):
+        attachment_info['-FEATURE-'] = 'Window'
+    feature_info = get_feature_info(feature, attachment_info, wall_info)
+    length = convert_to_feet_string(wall_info['-FEATURE LENGTH-'])
+    width = convert_to_feet_string(wall_info['-FEATURE WIDTH-'])
+    x_pos = convert_to_feet_string(wall_info['-X POS-'] * pixel_ratio)
+    y_pos = convert_to_feet_string(wall_info['-Y POS-'] * pixel_ratio)
+    angle = wall_info['-FEATURE ANGLE-']
+    center_distance = convert_to_feet_string(feature_info['-DISTANCE-'])
+    attachment_width = convert_to_feet_string(feature_info['-FEATURE LENGTH-'])
+    attachment_height = convert_to_feet_string(feature_info['-HEIGHT-'])
+    layout = [[sg.Text('Edit attachment information')],
+              [sg.Text('Wall Length', size =(25, 1)), sg.Text(length, size =(15, 1), key='-FEATURE LENGTH-'),
+                        sg.Radio('Imperial', "LENGTH", default=True, enable_events=True, key='-LENGTH IS IMPERIAL-'),
+                        sg.Radio('Metric', "LENGTH", default=False, enable_events=True, key='-LENGTH IS NOT IMPERIAL-')],
+              [sg.Text('Wall Width', size =(25, 1)), sg.Text(width, size =(15, 1), key='-FEATURE WIDTH-'),
+                        sg.Radio('Imperial', "WIDTH", default=True, enable_events=True, key='-WIDTH IS IMPERIAL-'),
+                        sg.Radio('Metric', "WIDTH", default=False, enable_events=True, key='-WIDTH IS NOT IMPERIAL-')],
+              [sg.Text('Wall X Center Position', size =(25, 1)), sg.Text(x_pos, size =(15, 1), key='-X POS-'),
+                        sg.Radio('Imperial', "X", default=True, enable_events=True, key='-X IS IMPERIAL-'),
+                        sg.Radio('Metric', "X", default=False, enable_events=True, key='-X IS NOT IMPERIAL-')],
+              [sg.Text('Wall Y Center Position', size =(25, 1)), sg.Text(y_pos, size =(15, 1), key='-Y POS-'),
+                        sg.Radio('Imperial', "Y", default=True, enable_events=True, key='-Y IS IMPERIAL-'),
+                        sg.Radio('Metric', "Y", default=False, enable_events=True, key='-Y IS NOT IMPERIAL-')],
+              [sg.Text('Wall Angle', size =(25, 1)), sg.Text(angle)],
+              [sg.Text('Distance from Center of wall', size =(25, 1)), sg.InputText(center_distance, size =(16, 1), key='-DISTANCE-'),
+                        sg.Radio('Imperial', "D", default=True, enable_events=True, key='-D IS IMPERIAL-'),
+                        sg.Radio('Metric', "D", default=False, enable_events=True, key='-D IS NOT IMPERIAL-')],
+              [sg.Text('Attachment Width', size =(25, 1)), sg.InputText(attachment_width, size =(16, 1), key='-ATTACHMENT WIDTH-'),
+                        sg.Radio('Imperial', "W", default=True, enable_events=True, key='-W IS IMPERIAL-'),
+                        sg.Radio('Metric', "W", default=False, enable_events=True, key='-W IS NOT IMPERIAL-')],
+              [sg.Text('Attachment Height', size =(25, 1)), sg.InputText(y_pos, size =(16, 1), key='-HEIGHT-'),
+                        sg.Radio('Imperial', "H", default=True, enable_events=True, key='-H IS IMPERIAL-'),
+                        sg.Radio('Metric', "H", default=False, enable_events=True, key='-H IS NOT IMPERIAL-')],
+              #[sg.Text('Feature Type:          '), sg.Combo(feat_list[feature_name], size=(10, 15),
+               #key='-FEATURE TYPE-', readonly=True)],
+              [sg.Submit(bind_return_key=True), sg.Cancel()]]
+
+    window = sg.Window('Edit Feature', layout)
+    while True:
+        event, values = window.read()
+        if event in (sg.WIN_CLOSED, 'Exit', 'Cancel'):
+            window.close()
+            return None
+        if event == 'Submit':
+            break
+        elif event == '-LENGTH IS IMPERIAL-':
+            str = convert_to_feet_string(wall_info['-FEATURE LENGTH-'])
+            window['-FEATURE LENGTH-'].update(str)
+        elif event == '-LENGTH IS NOT IMPERIAL-':
+            str = convert_to_meters_string(wall_info['-FEATURE LENGTH-'])
+            window['-FEATURE LENGTH-'].update(str)
+        elif event == '-WIDTH IS IMPERIAL-':
+            str = convert_to_feet_string(wall_info['-FEATURE WIDTH-'])
+            window['-FEATURE WIDTH-'].update(str)
+        elif event == '-WIDTH IS NOT IMPERIAL-':
+            str = convert_to_meters_string(wall_info['-FEATURE WIDTH-'])
+            window['-FEATURE WIDTH-'].update(str)
+        elif event == '-X IS IMPERIAL-':
+            str = convert_to_feet_string(wall_info['-X POS-'] * pixel_ratio)
+            window['-X POS-'].update(str)
+        elif event == '-X IS NOT IMPERIAL-':
+            str = convert_to_meters_string(wall_info['-X POS-'] * pixel_ratio)
+            window['-X POS-'].update(str)
+        elif event == '-Y IS IMPERIAL-':
+            str = convert_to_feet_string(wall_info['-Y POS-'] * pixel_ratio)
+            window['-Y POS-'].update(str)
+        elif event == '-Y IS NOT IMPERIAL-':
+            str = convert_to_meters_string(wall_info['-Y POS-'] * pixel_ratio)
+            window['-Y POS-'].update(str)
+        elif event == '-D IS IMPERIAL-':
+            str = convert_to_feet_string(feature_info['-DISTANCE-'] * pixel_ratio)
+            window['-DISTANCE-'].update(str)
+        elif event == '-D IS NOT IMPERIAL-':
+            str = convert_to_meters_string(feature_info['-DISTANCE-'] * pixel_ratio)
+            window['-DISTANCE-'].update(str)
+        elif event == '-W IS IMPERIAL-':
+            str = convert_to_feet_string(feature_info['-FEATURE LENGTH-'] * pixel_ratio)
+            window['-ATTACHMENT WIDTH-'].update(str)
+        elif event == '-W IS NOT IMPERIAL-':
+            str = convert_to_meters_string(feature_info['-FEATURE LENGTH-'] * pixel_ratio)
+            window['-ATTACHMENT WIDTH-'].update(str)
+        elif event == '-H IS IMPERIAL-':
+            str = convert_to_feet_string(feature_info['-HEIGHT-'] * pixel_ratio)
+            window['-HEIGHT-'].update(str)
+        elif event == '-H IS NOT IMPERIAL-':
+            str = convert_to_meters_string(feature_info['-HEIGHT-'] * pixel_ratio)
+            window['-HEIGHT-'].update(str)
+    window.close()
+
+    if not values['-D IS IMPERIAL-']:
+        values['-DISTANCE-'] = convert_to_centimeters(values['-DISTANCE-'])
+        values['-DISTANCE-'] *= 0.393701
+    else:
+        values['-DISTANCE-'] = convert_to_inches(values['-DISTANCE-'])
+    if not values['-W IS IMPERIAL-']:
+        values['-ATTACHMENT WIDTH-'] = convert_to_centimeters(values['-ATTACHMENT WIDTH-'])
+        values['-ATTACHMENT WIDTH-'] *= 0.393701
+    else:
+        values['-ATTACHMENT WIDTH-'] = convert_to_inches(values['-ATTACHMENT WIDTH-'])
+    if not values['-H IS IMPERIAL-']:
+        values['-HEIGHT-'] = convert_to_centimeters(values['-HEIGHT-'])
+        values['-HEIGHT-'] *= 0.393701
+    else:
+        values['-HEIGHT-'] = convert_to_inches(values['-HEIGHT-'])
+    values['-FEATURE ANGLE-'] = float(values['-HEIGHT-'])
+    return values
+
 def edit_blueprint_wall(feature, pixel_ratio):
     # feat_list
     feature_info = get_building_wall_info(feature)
@@ -532,6 +643,18 @@ def edit_blueprint_wall(feature, pixel_ratio):
     values['-FEATURE ANGLE-'] = float(values['-FEATURE ANGLE-'])
     return values
 
+def update_window(window, window_info):
+    window.position = window_info['-DISTANCE-']
+    #window.sillHeight = window_info['-SILL HEIGHT-']
+    #window.windowType = window_info['-WINDOW TYPE-']
+    #window.information = window_info['-WINDOW NOTES-']
+
+def update_door(door, door_info):
+    door.position = door_info['-DISTANCE-']
+    #door.hingePos = door_info['-HINGE POSITION-']
+    #door.doorType = door_info['-DOOR TYPE-']
+    #door.information = door_info['DOOR NOTES']
+
 def update_wall(wall, wall_info):
     wall.length = wall_info['-FEATURE LENGTH-']
     wall.wallType.width = wall_info['-FEATURE WIDTH-']
@@ -590,7 +713,9 @@ def get_feature_info(feature, wall_feature, wall_info):
     wall_feature['-Y POS-'] = wall_info['-Y POS-']
     if wall_feature['-FEATURE-'] == 'Window':
         wall_feature['-FEATURE LENGTH-'] = feature.windowType.width
+        wall_feature['-HEIGHT-'] = feature.windowType.height
     elif wall_feature['-FEATURE-'] == 'Door':
+        wall_feature['-HEIGHT-'] = feature.doorType.height
         wall_feature['-FEATURE LENGTH-'] = feature.doorType.width
     else:
         print('Feature not supported in DRAW')
@@ -679,7 +804,7 @@ def switch_to_other_graph(window, name1, graph1, name2, graph2, window_size):
     window.Element(name1).Update(visible=False)
     window.Element(name2).Update(visible=True)
 
-def erase_wall_attachment(graph, feature_dict, attachment, list_attachment):
+def erase_wall_attachment(graph, feature_dict, attachment):
     feature_ID = [k for k, v in feature_dict.items() if v == attachment]
     if len(feature_ID) == 1:
         feature_ID = feature_ID[0]
@@ -692,9 +817,9 @@ def erase_wall_attachment(graph, feature_dict, attachment, list_attachment):
 def erase_wall(graph, feature_dict, wall_id):
     wall = feature_dict[wall_id]
     for door in wall.listOfDoors:
-        erase_wall_attachment(graph, feature_dict, door, wall.listOfDoors)
+        erase_wall_attachment(graph, feature_dict, door)
     for window in wall.listOfWindows:
-        erase_wall_attachment(graph, feature_dict, window, wall.listOfWindows)
+        erase_wall_attachment(graph, feature_dict, window)
     graph.delete_figure(wall_id)
     feature_dict.pop(wall_id)
 
@@ -1192,13 +1317,36 @@ def main_gui():
             if select_fig is None:
                 popup_info('No Feature selected')
                 continue
-            if type(feature_dict[select_fig]) == type(bd.Wall()):
-                wall = feature_dict[select_fig]
-                new_info = edit_blueprint_wall(feature_dict[select_fig], x_pixel_ratio)
-                update_wall(feature_dict[select_fig], new_info)
-                erase_wall(graph2, feature_dict, select_fig)
-                draw_wall_and_attachments(window['-GRAPH2-'], folder, feature_images,
-                                    wall, x_pixel_ratio, feature_dict=feature_dict)
+            edit_feature = feature_dict[select_fig]
+            if type(edit_feature) == type(bd.Wall()):
+                new_info = edit_blueprint_wall(edit_feature, x_pixel_ratio)
+                if new_info != None:
+                    update_wall(edit_feature, new_info)
+                    erase_wall(graph2, feature_dict, select_fig)
+                    draw_wall_and_attachments(graph2, folder, feature_images,
+                                        edit_feature, x_pixel_ratio, feature_dict=feature_dict)
+            elif type(edit_feature) == type(bd.Door()):
+                wall_info = get_building_wall_info(feature_dict[edit_feature.parentID])
+                new_info = edit_blueprint_wall_attachment(edit_feature, x_pixel_ratio, wall_info)
+                if new_info != None:
+                    update_door(edit_feature, new_info)
+                    erase_wall_attachment(graph2, feature_dict, edit_feature)
+                    door_info = {}
+                    door_info['-FEATURE-'] = 'Door'
+                    feature_info = get_feature_info(edit_feature, door_info, wall_info)
+                    edit_id = draw_feature(graph2, folder, feature_images, feature_info, x_pixel_ratio)
+                    feature_dict[edit_id] = edit_feature
+            elif type(edit_feature) == type(bd.Window()):
+                wall_info = get_building_wall_info(feature_dict[edit_feature.parentID])
+                new_info = edit_blueprint_wall_attachment(edit_feature, x_pixel_ratio, wall_info)
+                if new_info != None:
+                    update_window(edit_feature, new_info)
+                    erase_wall_attachment(graph2, feature_dict, edit_feature)
+                    window_info = {}
+                    window_info['-FEATURE-'] = 'Window'
+                    feature_info = get_feature_info(edit_feature, window_info, wall_info)
+                    edit_id = draw_feature(graph2, folder, feature_images, feature_info, x_pixel_ratio)
+                    feature_dict[edit_id] = edit_feature
         elif event in ('Insert', "-Feature-") and graph2 and feature_name:
             # Get the user input for the object by creating another window
             # Returns a dictionary of strings (if a key is not used: in list format)
