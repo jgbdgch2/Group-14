@@ -294,8 +294,12 @@ def compileWall(f, Wall, storyLocalPlacement, wallHeight):
     ifcPointer +=1
     returnString = "#" + str(ifcWallPointer) + ","
     for Door in Wall.listOfDoors:
+        if((Door.position + Door.doorType.width / 2) > Wall.length / 2):
+            raise Exception("Door is outside bounds of parent wall")
         returnString = returnString + compileDoor(f, Door, Wall, ifcWallPointer, storyLocalPlacement)
     for Window in Wall.listOfWindows:
+        if((Window.position + Window.windowType.width / 2) > Wall.length / 2):
+            raise Exception("Window is outside bounds of parent wall")
         returnString = returnString + compileWindow(f, Window, Wall, ifcWallPointer, storyLocalPlacement)
     return returnString
 
@@ -308,9 +312,9 @@ def compileStory(f, Story, storyNumber):
 
     # Declare bottom elevation of the story where all the elements are listed
     f.write("#" + str(ifcPointer) + "= IFCBUILDINGSTOREY('" + getGUID() + "',$,'Story " + str(storyNumber) + \
-    " Base',$,$,#" + str(storyLocalPlacement) + ",$,'Story " + str(storyNumber) + " Base',.ELEMENT.," + str(Story.bottomElevation) + ");\n")
+    " Base',$,$,#" + str(storyLocalPlacement) + ",$,'Story " + str(storyNumber) + " Base',.ELEMENT.," + str(Story.bottomElevation / unitModifier) + ");\n")
     ifcPointer +=1
-    f.write("#" + str(ifcPointer) + "= IFCCARTESIANPOINT((0.,0.,"+ str(Story.bottomElevation) + "));\n")
+    f.write("#" + str(ifcPointer) + "= IFCCARTESIANPOINT((0.,0.,"+ str(Story.bottomElevation / unitModifier) + "));\n")
     ifcPointer +=1
     f.write("#" + str(ifcPointer) + "= IFCAXIS2PLACEMENT3D(#" + str(ifcPointer-1) + ",$,$);\n")
     ifcPointer +=1
