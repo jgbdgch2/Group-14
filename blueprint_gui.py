@@ -244,6 +244,8 @@ def get_pdf_as_image(new_size, filename, page_num):
 def convert_to_centimeters(str):
     value = []
     mult = 1
+    if len(str) < 1:
+        return 0.0
     if str[0] == '-':
         str = str[1:]
         mult = -1
@@ -266,6 +268,8 @@ def convert_to_inches(str):
     inches = []
     is_feet = True
     mult = 1
+    if len(str) < 1:
+        return 0.0
     if str[0] == '-':
         str = str[1:]
         mult = -1
@@ -697,6 +701,125 @@ def get_window_settings(settings):
     values['-IMAGE RESOLUTION-']     = int(values['-IMAGE RESOLUTION-'])
 
     return values
+
+def get_all_schedule_names(building_schedule):
+    wall_names = []
+    window_names = []
+    door_names = []
+    for wall_type in building_schedule.listOfWallTypes:
+        wall_names.append(wall_type.name)
+    for window_type in building_schedule.listOfWindowTypes:
+        window_names.append(window_type.name)
+    for  door_type in building_schedule.listOfDoorTypes:
+        door_names.append(door_type.name)
+    names = {'-WALL NAMES-': wall_names, '-WINDOW NAMES-': window_names,
+             '-DOOR NAMES-': door_names}
+    return names
+
+def get_schedule_numbers(building_schedule):
+    wall_number = window_number = door_number = 0
+    for wall_type in building_schedule.listOfWallTypes:
+        if wall_type.typeNumber > wall_number:
+            wall_number = wall_type.typeNumber
+    for window_type in building_schedule.listOfWindowTypes:
+        if window_type.typeNumber > window_number:
+            window_number = window_type.typeNumber
+    for  door_type in building_schedule.listOfDoorTypes:
+        if door_type.typeNumber > door_number:
+            door_number = door_type.typeNumber
+
+    return wall_number, window_number, door_number
+
+def blueprint_schedule_creator(building_schedule):
+    schedule_type = get_all_schedule_names(building_schedule)
+    wall_number, window_number, door_number = get_schedule_numbers(building_schedule)
+    left_col_schedule = [[sg.Text('', size =(35, 1), visible=True)], # Using this for padding control
+                         [sg.Text('Wall Schedules:', size =(20, 1))],
+                         [sg.Listbox(schedule_type['-WALL NAMES-'], enable_events=True,
+                          size=(30,5),key='-WALL LIST-')],
+                         [sg.Text('', size =(20, 1), visible=True)],
+                         [sg.Text('Window Schedules:', size =(20, 1))],
+                         [sg.Listbox(schedule_type['-WINDOW NAMES-'], enable_events=True,
+                          size=(30,5),key='-WINDOW LIST-')],
+                         [sg.Text('', size =(20, 1), visible=True)],
+                         [sg.Text('Door Schedules:', size =(20, 1))],
+                         [sg.Listbox(schedule_type['-DOOR NAMES-'], enable_events=True,
+                          size=(30,5),key='-DOOR LIST-')],
+                         ]
+
+    right_col_schedule = [[sg.Text('Schedule Name', size =(17, 1)),
+                           sg.InputText(size =(30, 1), key='-SCHEDULE NAME-')],
+                          #---------------------------------------------------
+                          [sg.Text('Schedule Width', size =(17, 1)),
+                           sg.InputText(size =(30, 1), key='-SCHEDULE WIDTH-'),
+                           sg.Radio('Imperial', "WIDTH", default=True, key='-W IS IMPERIAL-'),
+                           sg.Radio('Metric', "WIDTH", default=False)],
+                          #---------------------------------------------------
+                          [sg.Text('Schedule Height', size =(17, 1)),
+                           sg.InputText(size =(30, 1), key='-SCHEDULE HEIGHT-'),
+                           sg.Radio('Imperial', "HEIGHT", default=True, key='-H IS IMPERIAL-'),
+                           sg.Radio('Metric', "HEIGHT", default=False)],
+                          #---------------------------------------------------
+                          [sg.Text('Sill Height (Window)', size =(17, 1)),
+                           sg.InputText(size =(30, 1), key='-SILL HEIGHT-'),
+                           sg.Radio('Imperial', "SILL", default=True, key='-S IS IMPERIAL-'),
+                           sg.Radio('Metric', "SILL", default=False)],
+                          #---------------------------------------------------
+                          [sg.Text('Schedule Type', size =(17, 1)),
+                           sg.Combo(['Wall', 'Window', 'Door'], size=(10, 5),
+                           key='-SCHEDULE TYPE-', readonly=True)],
+                          [sg.Button('Add Schedule', key='-ADD SCHEDULE-')]
+                          ]
+
+    layout = [[sg.Column(left_col_schedule), sg.Column(right_col_schedule)]]
+    window = sg.Window('Building Schedule Tool', layout)
+    while True:
+        event, values = window.read()
+        if event in (sg.WIN_CLOSED, 'Exit', 'Cancel'):
+            window.close()
+            return
+        if event == '-ADD SCHEDULE-' and values != None:
+            if not values['-W IS IMPERIAL-']:
+                values['-SCHEDULE WIDTH-'] = convert_to_centimeters(values['-SCHEDULE WIDTH-'])
+                values['-SCHEDULE WIDTH-'] *= 0.393701
+            else:
+                values['-SCHEDULE WIDTH-'] = convert_to_inches(values['-SCHEDULE WIDTH-'])
+            if not values['-H IS IMPERIAL-']:
+                values['-SCHEDULE HEIGHT-'] = convert_to_centimeters(values['-SCHEDULE HEIGHT-'])
+                values['-SCHEDULE HEIGHT-'] *= 0.393701
+            else:
+                values['-SCHEDULE HEIGHT-'] = convert_to_inches(values['-SCHEDULE HEIGHT-'])
+            if not values['-S IS IMPERIAL-']:
+                values['-SILL HEIGHT-'] = convert_to_centimeters(values['-SILL HEIGHT-'])
+                values['-SILL HEIGHT-'] *= 0.393701
+            else:
+                values['-SILL HEIGHT-'] = convert_to_inches(values['-SILL HEIGHT-'])
+            #--------------------------------------------------------------------------------------
+            if values['-SCHEDULE TYPE-'] == 'Wall':
+                wall_number += 1
+                schedule = bd.WallType(typeNumber=wall_number,
+                                       name=values['-SCHEDULE NAME-'],
+                                       thickness=values['-SCHEDULE WIDTH-'])
+            elif values['-SCHEDULE TYPE-'] == 'Window':
+                window_number += 1
+                schedule = bd.WindowType(typeNumber=window_number,
+                                         name=values['-SCHEDULE NAME-'],
+                                         height=values['-SCHEDULE HEIGHT-'],
+                                         width=values['-SCHEDULE WIDTH-'],
+                                         sillHeight=values['-SILL HEIGHT-'])
+            elif values['-SCHEDULE TYPE-'] == 'Door':
+                door_number += 1
+                schedule = bd.DoorType(typeNumber=door_number,
+                                       name=values['-SCHEDULE NAME-'],
+                                       height=values['-SCHEDULE HEIGHT-'],
+                                       width=values['-SCHEDULE WIDTH-'])
+            building_schedule.append(schedule)
+            schedule_type = get_all_schedule_names(building_schedule)
+            window['-WALL LIST-'].update(schedule_type['-WALL NAMES-'])
+            window['-WINDOW LIST-'].update(schedule_type['-WINDOW NAMES-'])
+            window['-DOOR LIST-'].update(schedule_type['-DOOR NAMES-'])
+
+
 
 def machine_learning_features(img, buildingData, y_pixel_ratio): # Testing code for machine learning extraction
     data = mmd.machine_learning_feature_data_extractor(img, y_pixel_ratio)
@@ -1474,6 +1597,7 @@ def main_gui():
                 switch_to_other_graph(window, '-GRAPH1-', graph1, '-GRAPH2-', graph2, window_size)
                 window.Element('-Convert-').Update(visible=False)
                 window.Element('-EXPORT IFC-').Update(visible=True)
+                blueprint_schedule_creator(buildingData.buildingSchedule)
                 graph_draw_from_data(buildingData.listOfStories[story], graph2,
                                      feature_dict, x_pixel_ratio, folder, feature_images)
         elif  event == 'Quick Save':
