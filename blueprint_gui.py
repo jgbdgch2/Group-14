@@ -730,6 +730,22 @@ def get_schedule_number(building_schedule):
 
     return max(wall_number, window_number, door_number)
 
+def get_nearest_type(building_schedule, width, type):
+    if type == 'Wall':
+        print('Length: {}'.format(building_schedule.listOfWallTypes[0].thickness))
+        val = abs(building_schedule.listOfWallTypes[0].thickness - width)
+        print('Width: {}'.format(width))
+        for wall_type in building_schedule.listOfWallTypes:
+            if abs(wall_type.thickness - width) <= val:
+                val = abs(wall_type.thickness - width)
+                select_type = wall_type
+    elif type == 'Window':
+        pass
+    elif type == 'Door':
+        pass
+
+    return select_type
+
 def blueprint_schedule_creator(building_schedule):
     schedule_type = get_all_schedule_names(building_schedule)
     type_number = get_schedule_number(building_schedule)
@@ -1411,9 +1427,8 @@ def main_gui():
                         extract_feature = False
                         if result:
                             wall_object, width = result
-                            wall_type = bd.WallType(1, name=feature_info['-FEATURE NAME-'],
-                                                    thickness=width)
-                            wall_object.wallType = wall_type
+                            wall_object.wallType = get_nearest_type(buildingData.buildingSchedule, width, feature_info['-FEATURE TYPE-'])
+                            wall_object.typeNumber = wall_object.wallType.typeNumber
                             buildingData.listOfStories[story].append(wall_object)
                             draw_wall_and_attachments(window['-GRAPH2-'], folder, feature_images,
                                                 wall_object, x_pixel_ratio, feature_dict=feature_dict)
