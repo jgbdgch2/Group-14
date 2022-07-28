@@ -21,30 +21,30 @@ import importlib
 
 wall_objects = ('Door', 'Window') # This doesn't change and is used throughout the GUI
 
-def create_feature(info_dict, buildingData, story_id, x, y, pixel_ratio):
+def create_feature(info_dict, buildingData, story_id, x, y, pixel_ratio, type_name):
     type = info_dict['-FEATURE-']
     if type == 'Wall':
         # make a wall object
-        wall_type = bd.WallType(1, name=info_dict['-FEATURE NAME-'],
-                                thickness=info_dict['-FEATURE WIDTH-'])
+        wall_type = buildingData.buildingSchedule.searchByName(type_name)
         wall = bd.Wall(pos=(x / pixel_ratio, y / pixel_ratio), length=info_dict['-FEATURE LENGTH-'],
                        angle=info_dict['-FEATURE ANGLE-'], wallType=wall_type)
+        wall.typeNumber = wall_type.typeNumber
         buildingData.listOfStories[story_id].append(wall)
         return wall
     elif type == 'Door':
         # make a door object
-        door_type = bd.DoorType(typeNumber=1, name=info_dict['-FEATURE NAME-'],
-                    height=1.0, width=info_dict['-FEATURE WIDTH-'])
+        door_type = buildingData.buildingSchedule.searchByName(type_name)
         door = bd.Door(position=info_dict['-FEATURE LENGTH-'], hingePos=1, doorType=door_type)
+        door.typeNumber = door_type.typeNumber
         wall_attach = info_dict['-Wall-']
         wall_attach.append(door)
         return door
     elif type == 'Window':
         # make a window object
-        window_type = bd.WindowType(typeNumber=1, name=info_dict['-FEATURE NAME-'],
-                                    height=1.0, sillHeight=1.0)
+        window_type = buildingData.buildingSchedule.searchByName(type_name)
         window = bd.Window(position=info_dict['-FEATURE LENGTH-'], sillHeight=1.0, directionFacing=1,
                            windowType=window_type)
+        window.typeNumber = window_type.typeNumber
         wall_attach = info_dict['-Wall-']
         wall_attach.append(window)
         return window
@@ -419,36 +419,109 @@ def measure_tool_input_window(message):
         values['-TOOL LENGTH-'] = convert_to_inches(values['-TOOL LENGTH-'])
     return values
 
-def feature_input_window(feat_list, feature_name):
+def feature_input_window(building_schedule, feature_name):
+    schedule_names = get_all_schedule_names(building_schedule)
+    length_name = 'Distance from Center'
+    if feature_name == 'Wall':
+        length_name = 'Length'
+        list = schedule_names['-WALL NAMES-']
+        schedule = building_schedule.searchByName(list[0])
+        str = convert_to_feet_string(schedule.thickness)
+        info = [sg.Text('Thickness', size =(15, 1)), sg.Text(str, size =(15, 1), key='-THICKNESS-'),
+                sg.Radio('Imperial', "T", default=True, key='-T IS IMPERIAL-'),
+                sg.Radio('Metric', "T", default=False)]
+    elif feature_name == 'Window':
+        list = schedule_names['-WINDOW NAMES-']
+        schedule = building_schedule.searchByName(list[0])
+        height = convert_to_feet_string(schedule.height)
+        width = convert_to_feet_string(schedule.width)
+        sill_height = convert_to_feet_string(schedule.sillHeight)
+        info = [[sg.Text('Height', size =(17, 1)), sg.Text(height, size =(15, 1), key='-HEIGHT-'),
+                sg.Radio('Imperial', "H", default=True, key='-H IS IMPERIAL-'),
+                sg.Radio('Metric', "H", default=False)],
+                #------------------------------------------------------------------------
+               [sg.Text('Width', size =(17, 1)), sg.Text(width, size =(15, 1), key='-WIDTH-'),
+                sg.Radio('Imperial', "W", default=True, key='-W IS IMPERIAL-'),
+                sg.Radio('Metric', "W", default=False)],
+                #------------------------------------------------------------------------
+               [sg.Text('Sill Height', size =(17, 1)), sg.Text(sill_height, size =(15, 1), key='-SILL HEIGHT-'),
+                sg.Radio('Imperial', "S", default=True, key='-S IS IMPERIAL-'),
+                sg.Radio('Metric', "S", default=False)]]
+    elif feature_name == 'Door':
+        list = schedule_names['-DOOR NAMES-']
+        schedule = building_schedule.searchByName(list[0])
+        height = convert_to_feet_string(schedule.height)
+        width = convert_to_feet_string(schedule.width)
+        info = [[sg.Text('Height', size =(17, 1)), sg.Text(height, size =(15, 1), key='-HEIGHT-'),
+                sg.Radio('Imperial', "H", default=True, key='-H IS IMPERIAL-'),
+                sg.Radio('Metric', "H", default=False)],
+                #------------------------------------------------------------------------
+               [sg.Text('Width', size =(17, 1)), sg.Text(width, size =(15, 1), key='-WIDTH-'),
+                sg.Radio('Imperial', "W", default=True, key='-W IS IMPERIAL-'),
+                sg.Radio('Metric', "W", default=False)]]
+
     message = ('Please enter {} information').format(feature_name)
     layout = [[sg.Text(message)],
-              [sg.Text('Feature Name', size =(15, 1)), sg.InputText(key='-FEATURE NAME-')],
-              [sg.Text('Length', size =(15, 1)), sg.InputText(key='-FEATURE LENGTH-'),
+              [sg.Text(length_name, size =(17, 1)), sg.InputText(size=(30, 15), key='-FEATURE LENGTH-'),
                         sg.Radio('Imperial', "LENGTH", default=True, key='-LENGTH IS IMPERIAL-'),
                         sg.Radio('Metric', "LENGTH", default=False)],
-              [sg.Text('Width', size =(15, 1)), sg.InputText(key='-FEATURE WIDTH-'),
-                        sg.Radio('Imperial', "WIDTH", default=True, key='-WIDTH IS IMPERIAL-'),
-                        sg.Radio('Metric', "WIDTH", default=False)],
-              [sg.Text('Angle', size =(15, 1)), sg.InputText(key='-FEATURE ANGLE-')],
-              [sg.Text('Feature Type:          '), sg.Combo(feat_list[feature_name], size=(10, 15),
-               key='-FEATURE TYPE-', readonly=True)],
+              [sg.Text('Angle', size =(17, 1)), sg.InputText(size=(30, 15), key='-FEATURE ANGLE-')],
+              [sg.Text('Schedule Name:', size =(17, 1)), sg.Combo(list, size=(29, 15),
+               key='-SCHEDULE NAME-', readonly=True, enable_events=True)],
               [sg.Submit(bind_return_key=True), sg.Cancel()]]
 
-    window = sg.Window('New Feature', layout)
-    event, values = window.read()
+    layout.insert(4, info)
+    window = sg.Window('New Feature', layout).finalize()
+    window['-SCHEDULE NAME-'].update(list[0])
+    if feature_name != 'Wall':
+        window['-FEATURE ANGLE-'].update(visible=False)
+    while True:
+        event, values = window.read()
+        if event in (sg.WIN_CLOSED, 'Exit', 'Cancel'):
+            window.close()
+            return None
+        elif event == 'Submit':
+            break
+        elif event == '-SCHEDULE NAME-':
+            if feature_name == 'Wall':
+                if values['-T IS IMPERIAL-']:
+                    str = convert_to_feet_string(schedule.thickness)
+                else:
+                    str = convert_to_meters_string(schedule.thickness)
+                window['-THICKNESS-'].update(str)
+            elif feature_name == 'Window':
+                if values['-W IS IMPERIAL-']:
+                    str = convert_to_feet_string(schedule.width)
+                else:
+                    str = convert_to_meters_string(schedule.width)
+                window['-WIDTH-'].update(str)
+                if values['-H IS IMPERIAL-']:
+                    str = convert_to_feet_string(schedule.height)
+                else:
+                    str = convert_to_meters_string(schedule.height)
+                window['-HEIGHT-'].update(str)
+                if values['-S IS IMPERIAL-']:
+                    str = convert_to_feet_string(schedule.sillHeight)
+                else:
+                    str = convert_to_meters_string(schedule.sillHeight)
+                window['-SILL HEIGHT-'].update(str)
+            elif feature_name == 'Door':
+                if values['-W IS IMPERIAL-']:
+                    str = convert_to_feet_string(schedule.width)
+                else:
+                    str = convert_to_meters_string(schedule.width)
+                window['-WIDTH-'].update(str)
+                if values['-H IS IMPERIAL-']:
+                    str = convert_to_feet_string(schedule.height)
+                else:
+                    str = convert_to_meters_string(schedule.height)
+                window['-HEIGHT-'].update(str)
     window.close()
-    if event in (sg.WIN_CLOSED, 'Exit', 'Cancel'):
-        return None
     if not values['-LENGTH IS IMPERIAL-']:
         values['-FEATURE LENGTH-'] = convert_to_centimeters(values['-FEATURE LENGTH-'])
         values['-FEATURE LENGTH-'] *= 0.393701
     else:
         values['-FEATURE LENGTH-'] = convert_to_inches(values['-FEATURE LENGTH-'])
-    if not values['-WIDTH IS IMPERIAL-']:
-        values['-FEATURE WIDTH-'] = convert_to_centimeters(values['-FEATURE WIDTH-'])
-        values['-FEATURE WIDTH-'] *= 0.393701
-    else:
-        values['-FEATURE WIDTH-'] = convert_to_inches(values['-FEATURE WIDTH-'])
     return values
 
 def edit_blueprint_wall_attachment(feature, pixel_ratio, wall_info):
@@ -1261,6 +1334,7 @@ def main_gui():
             if not orig_img:
                 popup_info('Page Not Found!')
                 continue
+            blueprint_schedule_creator(buildingData.buildingSchedule)
             img = resize_img(orig_img, (new_size, new_size))
             graph1 = window["-GRAPH1-"]  # type: sg.Graph
             graph1.erase()
@@ -1427,7 +1501,8 @@ def main_gui():
                         extract_feature = False
                         if result:
                             wall_object, width = result
-                            wall_object.wallType = get_nearest_type(buildingData.buildingSchedule, width, feature_info['-FEATURE TYPE-'])
+                            wall_object.wallType = get_nearest_type(buildingData.buildingSchedule,
+                                                                    width, feature_info['-FEATURE TYPE-'])
                             wall_object.typeNumber = wall_object.wallType.typeNumber
                             buildingData.listOfStories[story].append(wall_object)
                             draw_wall_and_attachments(window['-GRAPH2-'], folder, feature_images,
@@ -1568,15 +1643,17 @@ def main_gui():
             if feature_name in wall_objects and (not select_fig or type(feature_dict[select_fig]) != type(bd.Wall())):
                 popup_info('Please select a Wall for inserting Doors and windows')
                 continue
-            feature_info = feature_input_window(feat_types, feature_name)
-            if (feature_info == None or feature_info['-FEATURE LENGTH-'] == 0
-                or feature_info['-FEATURE WIDTH-'] == 0):
-                popup_info('Feature Length and Width Required')
+            feature_info = feature_input_window(buildingData.buildingSchedule, feature_name)
+            if feature_info == None:
                 continue
-            if feature_info['-FEATURE ANGLE-'] == '' or not feature_info['-FEATURE ANGLE-'].isdigit():
-                feature_info['-FEATURE ANGLE-'] = 0.0
-            else:
-                feature_info['-FEATURE ANGLE-'] = float(feature_info['-FEATURE ANGLE-'])
+            if feature_info['-FEATURE LENGTH-'] == 0:
+                popup_info('Feature Length Required')
+                continue
+            if feature_name == 'Wall':
+                if feature_info['-FEATURE ANGLE-'] == '' or not feature_info['-FEATURE ANGLE-'].isdigit():
+                    feature_info['-FEATURE ANGLE-'] = 0.0
+                else:
+                    feature_info['-FEATURE ANGLE-'] = float(feature_info['-FEATURE ANGLE-'])
             feature_info['-FEATURE-'] = feature_name
             if feature_name in wall_objects:
                 wall = feature_dict[select_fig]
@@ -1585,7 +1662,8 @@ def main_gui():
                 feature_info['-Wall-'] = wall
             if event == "-Feature-":
                 x, y = window_width / 2, window_height / 2
-            feature_object = create_feature(feature_info, buildingData, story, x, y, x_pixel_ratio)
+            feature_object = create_feature(feature_info, buildingData, story, x, y,
+                                            x_pixel_ratio, feature_info['-SCHEDULE NAME-'])
             if feature_name in wall_objects:
                 feature_object.parentID = select_fig
                 feature_info = get_feature_info(feature_object, feature_info, wall_info)
@@ -1689,7 +1767,6 @@ def main_gui():
                 switch_to_other_graph(window, '-GRAPH1-', graph1, '-GRAPH2-', graph2, window_size)
                 window.Element('-Convert-').Update(visible=False)
                 window.Element('-EXPORT IFC-').Update(visible=True)
-                blueprint_schedule_creator(buildingData.buildingSchedule)
                 graph_draw_from_data(buildingData.listOfStories[story], graph2,
                                      feature_dict, x_pixel_ratio, folder, feature_images)
         elif  event == 'Quick Save':
