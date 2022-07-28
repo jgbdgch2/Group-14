@@ -716,7 +716,7 @@ def get_all_schedule_names(building_schedule):
              '-DOOR NAMES-': door_names}
     return names
 
-def get_schedule_numbers(building_schedule):
+def get_schedule_number(building_schedule):
     wall_number = window_number = door_number = 0
     for wall_type in building_schedule.listOfWallTypes:
         if wall_type.typeNumber > wall_number:
@@ -728,11 +728,11 @@ def get_schedule_numbers(building_schedule):
         if door_type.typeNumber > door_number:
             door_number = door_type.typeNumber
 
-    return wall_number, window_number, door_number
+    return max(wall_number, window_number, door_number)
 
 def blueprint_schedule_creator(building_schedule):
     schedule_type = get_all_schedule_names(building_schedule)
-    wall_number, window_number, door_number = get_schedule_numbers(building_schedule)
+    type_number = get_schedule_number(building_schedule)
     left_col_schedule = [[sg.Text('', size =(35, 1), visible=True)], # Using this for padding control
                          [sg.Text('Wall Schedules:', size =(20, 1))],
                          [sg.Listbox(schedule_type['-WALL NAMES-'], enable_events=True,
@@ -768,17 +768,21 @@ def blueprint_schedule_creator(building_schedule):
                           [sg.Text('Schedule Type', size =(17, 1)),
                            sg.Combo(['Wall', 'Window', 'Door'], size=(10, 5),
                            key='-SCHEDULE TYPE-', readonly=True)],
-                          [sg.Button('Add Schedule', key='-ADD SCHEDULE-')]
+                          [sg.Button('Add Schedule', key='-ADD SCHEDULE-')],
+                          [sg.Button('Delete Schedule', key='-DELETE SCHEDULE-')]
                           ]
 
     layout = [[sg.Column(left_col_schedule), sg.Column(right_col_schedule)]]
-    window = sg.Window('Building Schedule Tool', layout)
+    window = sg.Window('Building Schedule Tool', layout).finalize()
+    window['-DELETE SCHEDULE-'].update(visible=False)
+    window['-SCHEDULE TYPE-'].update('Wall')
     while True:
         event, values = window.read()
         if event in (sg.WIN_CLOSED, 'Exit', 'Cancel'):
             window.close()
             return
         if event == '-ADD SCHEDULE-' and values != None:
+            schedule_type = get_all_schedule_names(building_schedule)
             if not values['-W IS IMPERIAL-']:
                 values['-SCHEDULE WIDTH-'] = convert_to_centimeters(values['-SCHEDULE WIDTH-'])
                 values['-SCHEDULE WIDTH-'] *= 0.393701
@@ -795,21 +799,28 @@ def blueprint_schedule_creator(building_schedule):
             else:
                 values['-SILL HEIGHT-'] = convert_to_inches(values['-SILL HEIGHT-'])
             #--------------------------------------------------------------------------------------
+            type_number +=1
             if values['-SCHEDULE TYPE-'] == 'Wall':
-                wall_number += 1
-                schedule = bd.WallType(typeNumber=wall_number,
+                if values['-SCHEDULE NAME-'] in schedule_type['-WALL NAMES-']:
+                    popup_info('Name already exists!')
+                    continue
+                schedule = bd.WallType(typeNumber=type_number,
                                        name=values['-SCHEDULE NAME-'],
                                        thickness=values['-SCHEDULE WIDTH-'])
             elif values['-SCHEDULE TYPE-'] == 'Window':
-                window_number += 1
-                schedule = bd.WindowType(typeNumber=window_number,
+                if values['-SCHEDULE NAME-'] in schedule_type['-WINDOW NAMES-']:
+                    popup_info('Name already exists!')
+                    continue
+                schedule = bd.WindowType(typeNumber=type_number,
                                          name=values['-SCHEDULE NAME-'],
                                          height=values['-SCHEDULE HEIGHT-'],
                                          width=values['-SCHEDULE WIDTH-'],
                                          sillHeight=values['-SILL HEIGHT-'])
             elif values['-SCHEDULE TYPE-'] == 'Door':
-                door_number += 1
-                schedule = bd.DoorType(typeNumber=door_number,
+                if values['-SCHEDULE NAME-'] in schedule_type['-DOOR NAMES-']:
+                    popup_info('Name already exists!')
+                    continue
+                schedule = bd.DoorType(typeNumber=type_number,
                                        name=values['-SCHEDULE NAME-'],
                                        height=values['-SCHEDULE HEIGHT-'],
                                        width=values['-SCHEDULE WIDTH-'])
@@ -818,8 +829,74 @@ def blueprint_schedule_creator(building_schedule):
             window['-WALL LIST-'].update(schedule_type['-WALL NAMES-'])
             window['-WINDOW LIST-'].update(schedule_type['-WINDOW NAMES-'])
             window['-DOOR LIST-'].update(schedule_type['-DOOR NAMES-'])
-
-
+        elif event in ('-WALL LIST-', '-WINDOW LIST-', '-DOOR LIST-'):
+            window['-DELETE SCHEDULE-'].update(visible=True)
+            if event == '-WALL LIST-':
+                window['-WINDOW LIST-'].set_value([])
+                window['-DOOR LIST-'].set_value([])
+                wall_type = building_schedule.searchByName(values['-WALL LIST-'][0])
+                window['-SCHEDULE NAME-'].update(wall_type.name)
+                if values['-W IS IMPERIAL-']:
+                    str = convert_to_feet_string(wall_type.thickness)
+                else:
+                    str = convert_to_meters_string(wall_type.thickness)
+                window['-SCHEDULE WIDTH-'].update(str)
+                window['-SCHEDULE TYPE-'].update('Wall')
+                window['-SCHEDULE HEIGHT-'].update('')
+                window['-SILL HEIGHT-'].update('')
+            elif event == '-WINDOW LIST-':
+                window['-WALL LIST-'].set_value([])
+                window['-DOOR LIST-'].set_value([])
+                window_type = building_schedule.searchByName(values['-WINDOW LIST-'][0])
+                window['-SCHEDULE NAME-'].update(window_type.name)
+                if values['-W IS IMPERIAL-']:
+                    str = convert_to_feet_string(window_type.width)
+                else:
+                    str = convert_to_meters_string(window_type.width)
+                window['-SCHEDULE WIDTH-'].update(str)
+                if values['-H IS IMPERIAL-']:
+                    str = convert_to_feet_string(window_type.height)
+                else:
+                    str = convert_to_meters_string(window_type.height)
+                window['-SCHEDULE HEIGHT-'].update(str)
+                if values['-S IS IMPERIAL-']:
+                    str = convert_to_feet_string(window_type.sillHeight)
+                else:
+                    str = convert_to_meters_string(window_type.sillHeight)
+                window['-SILL HEIGHT-'].update(str)
+                window['-SCHEDULE TYPE-'].update('Window')
+            elif event == '-DOOR LIST-':
+                window['-WINDOW LIST-'].set_value([])
+                window['-WALL LIST-'].set_value([])
+                door_type = building_schedule.searchByName(values['-DOOR LIST-'][0])
+                window['-SCHEDULE NAME-'].update(door_type.name)
+                if values['-W IS IMPERIAL-']:
+                    str = convert_to_feet_string(door_type.width)
+                else:
+                    str = convert_to_meters_string(door_type.width)
+                window['-SCHEDULE WIDTH-'].update(str)
+                if values['-H IS IMPERIAL-']:
+                    str = convert_to_feet_string(door_type.height)
+                else:
+                    str = convert_to_meters_string(door_type.height)
+                window['-SCHEDULE HEIGHT-'].update(str)
+                window['-SCHEDULE TYPE-'].update('Door')
+                window['-SILL HEIGHT-'].update('')
+        elif event == '-DELETE SCHEDULE-':
+            if len(values['-WALL LIST-']) > 0:
+                wall_type = building_schedule.searchByName(values['-WALL LIST-'][0])
+                building_schedule.deleteByType(wall_type.typeNumber)
+            elif len(values['-WINDOW LIST-']) > 0:
+                window_type = building_schedule.searchByName(values['-WINDOW LIST-'][0])
+                building_schedule.deleteByType(window_type.typeNumber)
+            elif len(values['-DOOR LIST-']) > 0:
+                door_type = building_schedule.searchByName(values['-DOOR LIST-'][0])
+                building_schedule.deleteByType(door_type.typeNumber)
+            schedule_type = get_all_schedule_names(building_schedule)
+            window['-WALL LIST-'].update(schedule_type['-WALL NAMES-'])
+            window['-WINDOW LIST-'].update(schedule_type['-WINDOW NAMES-'])
+            window['-DOOR LIST-'].update(schedule_type['-DOOR NAMES-'])
+            window['-DELETE SCHEDULE-'].update(visible=False)
 
 def machine_learning_features(img, buildingData, y_pixel_ratio): # Testing code for machine learning extraction
     data = mmd.machine_learning_feature_data_extractor(img, y_pixel_ratio)

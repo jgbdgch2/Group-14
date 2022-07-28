@@ -150,17 +150,17 @@ class Schedule:
 
         for element in self.listOfWallTypes:
             if element.typeNumber == typeNumber:
-                listOfWallTypes.remove(element)
+                self.listOfWallTypes.remove(element)
                 return 0;
 
         for element in self.listOfDoorTypes:
             if element.typeNumber == typeNumber:
-                listOfDoorTypes.remove(element)
+                self.listOfDoorTypes.remove(element)
                 return 0
 
         for element in self.listOfWindowTypes:
             if element.typeNumber == typeNumber:
-                listOfWindowTypes.remove(element)
+                self.listOfWindowTypes.remove(element)
                 return 0
         return -1
 
