@@ -3,11 +3,6 @@ import json
 
 #import ifc_compiler
 
-#TODO add more comments
-#TODO lookup hit should return "None" instead of -1
-
-#Note: all members called measurement_system_flag must be "IMPERIAL_UNITS" or "METRIC_UNITS"
-
 class BuildingData:
     #The 3 lists are lists of their respective classes
     #Building schedule is a Schedule object which is create in __init__
@@ -155,17 +150,17 @@ class Schedule:
 
         for element in self.listOfWallTypes:
             if element.typeNumber == typeNumber:
-                listOfWallTypes.remove(element)
+                self.listOfWallTypes.remove(element)
                 return 0;
 
         for element in self.listOfDoorTypes:
             if element.typeNumber == typeNumber:
-                listOfDoorTypes.remove(element)
+                self.listOfDoorTypes.remove(element)
                 return 0
 
         for element in self.listOfWindowTypes:
             if element.typeNumber == typeNumber:
-                listOfWindowTypes.remove(element)
+                self.listOfWindowTypes.remove(element)
                 return 0
         return -1
 
@@ -430,7 +425,7 @@ class Wall:
         assert type(X) == type(0.0) and type(Y) == type(0.0), f"pos must be a tuple of floats, got {type(X)} and {type(Y)}."
         assert type(length) == type(0.0), f"length must be a type float, got type {type(length)}."
         assert type(angle) == type(0.0), f"angle must be type float, got type {type(angle)}."
-        #assert type(wallType) == type(WallType() or type(wallType) == type(0.0)), f"wallType must be WallType object, got type {type(wallType)}."
+        assert type(wallType) == type(WallType()), f"wallType must be WallType object, got type {type(wallType)}."
 
         self.xPos, self.yPos = pos
         self.length = length
@@ -464,6 +459,9 @@ class Door:
     doorType = -1
     typeNumber = 0
 
+    # Used by GUI to identify parent wall
+    parentID = -1
+
     #Str array of info about wall
     #Includes tags
     information = []
@@ -495,6 +493,9 @@ class Window:
     #Reference to WindowType object
     windowType = -1
     typeNumber = 0
+
+    # Used by GUI to identify parent wall
+    parentID = -1
 
     #Str array of info about wall
     #Includes tags
@@ -529,7 +530,6 @@ def readJSON(filename):
     bd = BuildingData()
     read = open(filename, "r")
     jsonDict = json.load(read)
-    print(jsonDict)
     # Set is isImperial
     bd.isImperial = jsonDict['isImperial']
 
@@ -602,19 +602,19 @@ def testCode():
 
 
     #South wall
-    buildingData.listOfStories[0].append(Wall(pos=(1135.0, 1680.0), length=395.0, angle=145.0,\
+    buildingData.listOfStories[0].append(Wall(pos=(268.46, 397.37), length=395.0, angle=145.0,\
                                             wallType=buildingData.buildingSchedule.searchByType(1)))
 
     #East wall
-    buildingData.listOfStories[0].append(Wall(pos=(390.0, 935.0), length=395.0, angle=90.0,\
+    buildingData.listOfStories[0].append(Wall(pos=(92.25,221.16), length=395.0, angle=90.0,\
                                             wallType=buildingData.buildingSchedule.searchByType(1)))
 
     #North wall
-    buildingData.listOfStories[0].append(Wall(pos=(1880.0, 935.0), length=395.0, angle=90.0,\
+    buildingData.listOfStories[0].append(Wall(pos=(444.67, 221.16), length=395.0, angle=90.0,\
                                             wallType=buildingData.buildingSchedule.searchByType(1)))
 
     #West wall
-    buildingData.listOfStories[0].append(Wall(pos=(1135.0, 190.0), length=395.0, angle=0.0, \
+    buildingData.listOfStories[0].append(Wall(pos=(268.46, 44.94), length=395.0, angle=0.0, \
                                             wallType=buildingData.buildingSchedule.searchByType(1)))
                                             # 4.227848101265823
                                             # 1670
@@ -626,9 +626,11 @@ def testCode():
 
     #ifc_compiler.compile(buildingData, "buildingData.ifc")
 
-    writeJSON(buildingData, "save.json")
-    bd = readJSON("save.json")
+    #writeJSON(buildingData, "save.json")
+    #bd = readJSON("save.json")
 
     #ifc_compiler.compile(buildingData, "bd.ifc")
+
+    return buildingData
 
 #testCode()

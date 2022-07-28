@@ -281,9 +281,9 @@ def compileDoor(f, Door, Wall, ifcWallPointer, storyLocalPlacement):
     returnString = "#" + str(ifcDoorPointer) + ","
     return returnString
 
-def compileWall(f, Wall, storyLocalPlacement):
+def compileWall(f, Wall, storyLocalPlacement, wallHeight):
     global ifcPointer
-    printVerticalShapeDef(f, getWallCoords(Wall), 8.0)
+    printVerticalShapeDef(f, getWallCoords(Wall), wallHeight)
     #221= IFCWALL('1btdOju4n3KfkQnsDbRkrg', $, $, $, $, #storyLocalPlacement, #220, '2712', .NOTDEFINED.);
     f.write("#" + str(ifcPointer) + "= IFCWALL('" + getGUID() + "', $, '" + Wall.wallType.name + "', $, $, #" + str(storyLocalPlacement) + ", #" + str(ifcPointer-1) + ", $, .NOTDEFINED.);\n")
     ifcWallPointer = ifcPointer
@@ -294,22 +294,27 @@ def compileWall(f, Wall, storyLocalPlacement):
     ifcPointer +=1
     returnString = "#" + str(ifcWallPointer) + ","
     for Door in Wall.listOfDoors:
+        if((Door.position + Door.doorType.width / 2) > Wall.length / 2):
+            raise Exception("Door is outside bounds of parent wall")
         returnString = returnString + compileDoor(f, Door, Wall, ifcWallPointer, storyLocalPlacement)
     for Window in Wall.listOfWindows:
+        if((Window.position + Window.windowType.width / 2) > Wall.length / 2):
+            raise Exception("Window is outside bounds of parent wall")
         returnString = returnString + compileWindow(f, Window, Wall, ifcWallPointer, storyLocalPlacement)
     return returnString
 
 def compileStory(f, Story, storyNumber):
     global ifcPointer
+    global unitModifier
     storyPointer = ifcPointer;
     storyLocalPlacement = ifcPointer+3;
     storyElements = ""
 
     # Declare bottom elevation of the story where all the elements are listed
     f.write("#" + str(ifcPointer) + "= IFCBUILDINGSTOREY('" + getGUID() + "',$,'Story " + str(storyNumber) + \
-    " Base',$,$,#" + str(storyLocalPlacement) + ",$,'Story " + str(storyNumber) + " Base',.ELEMENT.," + str(Story.bottomElevation) + ");\n")
+    " Base',$,$,#" + str(storyLocalPlacement) + ",$,'Story " + str(storyNumber) + " Base',.ELEMENT.," + str(Story.bottomElevation / unitModifier) + ");\n")
     ifcPointer +=1
-    f.write("#" + str(ifcPointer) + "= IFCCARTESIANPOINT((0.,0.,"+ str(Story.bottomElevation) + "));\n")
+    f.write("#" + str(ifcPointer) + "= IFCCARTESIANPOINT((0.,0.,"+ str(Story.bottomElevation / unitModifier) + "));\n")
     ifcPointer +=1
     f.write("#" + str(ifcPointer) + "= IFCAXIS2PLACEMENT3D(#" + str(ifcPointer-1) + ",$,$);\n")
     ifcPointer +=1
@@ -319,7 +324,8 @@ def compileStory(f, Story, storyNumber):
     ifcPointer +=1
 
     for Wall in Story.listOfWalls:
-        storyElements = storyElements + compileWall(f, Wall, storyLocalPlacement)
+        wallHeight = (Story.topElevation - Story.bottomElevation) / unitModifier
+        storyElements = storyElements + compileWall(f, Wall, storyLocalPlacement, wallHeight)
 
     storyElements = storyElements[:len(storyElements)-1] # Removes extra , from end of string
 
