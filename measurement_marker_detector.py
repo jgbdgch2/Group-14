@@ -3,7 +3,7 @@ import numpy as np
 import math
 import opencv_text_detection_image as text_detect
 import building_data
-#import test_frcnn_modified
+import test_frcnn_modified
 
 # returns length of line in pixels
 def measure_line(points):
@@ -101,7 +101,7 @@ def point_segment_distance(px, py, x1, y1, x2, y2):
 def calculate_center(max_line, smaller_line, minx, miny):
     x11, y11, x12, y12 = max_line
     x21, y21, x22, y22 = smaller_line
-    
+
     if True:
         return ((x11+x12+x21+x22)/4,(y11+y12+y21+y22)/4)
 
@@ -121,36 +121,36 @@ def calculate_center(max_line, smaller_line, minx, miny):
     if distance_1 < distance_2:
         return (float(center_option_1[0] + minx), float(center_option_1[1] + miny))
     return (float(center_option_2[0] + minx), float(center_option_2[1] + miny))
-    
+
 def bind_lines(max_line, smaller_line):
     x11, y11, x12, y12 = max_line
     x21, y21, x22, y22 = smaller_line
     x11new, y11new, x12new, y12new = find_a_prime_b_prime((x21, y21), (x22, y22), ((x11+x12)/2, (y11+y12)/2))
     x21new, y21new, x22new, y22new = find_a_prime_b_prime((x11, y11), (x12, y12), ((x21+x22)/2, (y21+y22)/2))
-    
+
     if measure_line((x11, y11, x11+x12/2, y11+y12/2)) < measure_line((x11new, y11new, x11+x12/2, y11+y12/2)):
         x11new = x11
         y11new = y11
-        
+
     if measure_line((x12, y12, x11+x12/2, y11+y12/2)) < measure_line((x12new, y12new, x11+x12/2, y11+y12/2)):
         x12new = x12
         y12new = y12
-        
+
     if measure_line((x21, y21, x21+x22/2, y21+y22/2)) < measure_line((x21new, y21new, x21+x22/2, y21+y22/2)):
         x21new = x21
         y21new = y21
-        
+
     if measure_line((x22, y22, x21+x22/2, y21+y22/2)) < measure_line((x22new, y22new, x21+x22/2, y21+y22/2)):
         x22new = x22
         y22new = y22
-        
+
     max_line_new = (x11new, y11new, x12new, y12new)
     smaller_line_new = (x21new, y21new, x22new, y22new)
-    
+
     #TODO DELETE
     #print(max_line_new)
     #print(smaller_line_new)
-    
+
     return max_line_new, smaller_line_new
 #implementation of an algorithm defined here
 #https://math.stackexchange.com/questions/1450858/get-a-line-segment-on-the-line-parallel-to-another-line-segment
@@ -170,14 +170,14 @@ def find_a_prime_b_prime(point1, point2, point3):
     B = int(xa - xb)
     C = int(xb * ya - xa * yb)
     Cprime = int((yc * (xb - xa)) + (xc * (ya - yb)))
-    
+
     xprimea = int(((B**2)*xa - A*((B * ya) + Cprime)) / (A**2 + B**2))
     yprimea = int(((A**2)*ya - B*((A * xa) + Cprime)) / (A**2 + B**2))
     xprimeb = int(((B**2)*xb - A*((B * yb) + Cprime)) / (A**2 + B**2))
     yprimeb = int(((A**2)*yb - B*((A * xb) + Cprime)) / (A**2 + B**2))
-    
+
     return xprimea, yprimea, xprimeb, yprimeb
-    
+
 def pol2cart(rho, phi):
     x = rho * np.cos(phi)
     y = rho * np.sin(phi)
@@ -239,9 +239,9 @@ def find_measurement_marker(file_name):
     return max_line
 
 def find_wall(full_image, bounding_box, pixelToInches):
-    
+
     cv2.imwrite('full_image.png',full_image)
-    
+
     #guarantees we know where the bottom left corner of the bounding box is,
     #incase the wrong 2 corners are passed
     boundingx1, boundingy1 = bounding_box[0]
@@ -266,13 +266,13 @@ def find_wall(full_image, bounding_box, pixelToInches):
                 minLineLength=10, # Min allowed length of line
                 maxLineGap=100*pixelToInches #TODO: update to be the span of the largest window or door, 2m default
                 )
-                
+
     try:
         if lines == None:
             return None
     except:
         None
-        
+
     #TODO delete
     #draw lines on image. used for testing
     for points in lines:
@@ -282,7 +282,7 @@ def find_wall(full_image, bounding_box, pixelToInches):
     #print(smaller_line)
     #cv2.line(image,(smaller_line[0],smaller_line[1]),(smaller_line[2],smaller_line[3]),(255,0,255),2)
     cv2.imwrite('detectedLines.png',image)
-        
+
     #TODO put this in a loop that breaks when it finds a max line and a suitable paralell line
     #returns longest line found
     max_line = (0, 0, 0, 0)
@@ -314,9 +314,9 @@ def find_wall(full_image, bounding_box, pixelToInches):
     #print(find_line_angle((0,10,1,0)))
     #print(max_line, smaller_line)
     #print("wall detected")
-    
+
     max_line, smaller_line = bind_lines(max_line, smaller_line)
-    
+
     #TODO DELETE
     cv2.line(image,(max_line[0],max_line[1]),(max_line[2],max_line[3]),(255,0,255),2)
     cv2.line(image,(smaller_line[0],smaller_line[1]),(smaller_line[2],smaller_line[3]),(255,0,255),2)
@@ -324,15 +324,15 @@ def find_wall(full_image, bounding_box, pixelToInches):
     #print(smaller_line)
     #cv2.line(image,(smaller_line[0],smaller_line[1]),(smaller_line[2],smaller_line[3]),(255,0,255),2)
     cv2.imwrite('detectedLines.png',image)
-    
+
     center = calculate_center(max_line, smaller_line, minx, miny)
     center = (center[1], len(full_image) - center[0])
-    
+
     return calculate_center(max_line, smaller_line, minx, miny), float(measure_line(max_line)), find_line_angle(max_line), segments_distance(max_line, smaller_line)
 
 def machine_learning_feature_data_extractor(im, pixelToInches):
     elements = []
-    #bounding_boxes = test_frcnn_modified.test(im)
+    bounding_boxes = test_frcnn_modified.test(im)
     #print(bounding_boxes)
     '''
     for box in bounding_boxes:
@@ -340,6 +340,11 @@ def machine_learning_feature_data_extractor(im, pixelToInches):
             elements.append(feature_data_extractor(im, box.bounding, pixelToInches))
     return elements
     '''
+# remove this after testing
+#"C:\Users\Stepnanie\OneDrive\Documents\GitHub\Group-14\blueprints\originals\Grant_Cropped_Blueprint.png"
+filepath_image = "blueprints\originals\Grant_Cropped_Blueprint.png"
+machine_learning_feature_data_extractor(filepath_image, 40)
+
 def feature_data_extractor(im, bounding_box, pixelToInches, element_type):
     #TODO REMOVE
     #print("bounding box is", bounding_box, "image size is", len(im[0]), len(im), "reload worked")
