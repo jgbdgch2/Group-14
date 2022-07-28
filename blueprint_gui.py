@@ -1173,9 +1173,11 @@ def attachment_translate_along_wall(graph, feature_dict, delta_x, delta_y, fig_i
             y_positive = False
 
         #-----------------------
-        if x_positive and (angle < 270 or angle > 90):
+        # Logic for positive or negative distance values
+        #-----------------------
+        if x_positive and (angle < 270 and angle > 90):
             final_distance *= -1
-        elif not x_positive and (angle < 90 or angle > 270):
+        elif not x_positive and (angle < 90 and angle > 270):
             final_distance *= -1
         elif not y_positive and angle == 90:
             final_distance *= -1
