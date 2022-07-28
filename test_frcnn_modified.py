@@ -30,9 +30,9 @@ def test(image):
 	(options, args) = parser.parse_args()
 
 	# need to be fixed
-	os.mkdir('./results_imgs')
-	if not options.test_path:   # if filename is not given
-		parser.error('Error: path to test data must be specified. Pass --path to command line')
+	# os.mkdir('./results_imgs')
+	# if not options.test_path:   # if filename is not given
+		# parser.error('Error: path to test data must be specified. Pass --path to command line')
 
 
 	config_output_filename = options.config_filename
@@ -106,7 +106,7 @@ def test(image):
 	class_mapping = {v: k for k, v in class_mapping.items()}
 
 	# do not print stuff
-	# print(class_mapping)
+	print(class_mapping)
 	class_to_color = {class_mapping[v]: np.random.randint(0, 255, 3) for v in class_mapping}
 	C.num_rois = int(options.num_rois)
 
@@ -142,7 +142,7 @@ def test(image):
 	model_classifier = Model([feature_map_input, roi_input], classifier)
 
 	# do not print stuff
-	# print('Loading weights from {}'.format(C.model_path))
+	print('Loading weights from {}'.format(C.model_path))
 	model_rpn.load_weights(C.model_path, by_name=True)
 	model_classifier.load_weights(C.model_path, by_name=True)
 
@@ -162,7 +162,7 @@ def test(image):
 		if not img_name.lower().endswith(('.bmp', '.jpeg', '.jpg', '.png', '.tif', '.tiff')):
 			continue
 		# not printing stuff
-		# print(img_name)
+		print(img_name)
 		st = time.time()
 		# this may cause problems later
 		# filepath = os.path.join(img_path,img_name)
@@ -231,15 +231,51 @@ def test(image):
 				bboxes[cls_name].append([C.rpn_stride*x, C.rpn_stride*y, C.rpn_stride*(x+w), C.rpn_stride*(y+h)])
 				probs[cls_name].append(np.max(P_cls[0, ii, :]))
 
+		# this is for debugging
+		print("Printing all the bboxes")
+		print(bboxes)
+		print("Printing length of bboxes")
+		print(len(bboxes))
+
 		all_dets = []
 
 		for key in bboxes:
 			bbox = np.array(bboxes[key])
 
+			# this is for debugging
+			print("Printing size of bbox which is instead for loop")
+			print(bbox.size)
+			print("Printing shape of bbox")
+			print(np.shape(bbox))
+
 			new_boxes, new_probs = roi_helpers.non_max_suppression_fast(bbox, np.array(probs[key]), overlap_thresh=0.5)
+
+			# this is for debugging
+			print("Printing size of new_boxes")
+			print(new_boxes.size)
+			print("Printing shape of new_boxes")
+			print(np.shape(new_boxes))
+
 			real_coor_boxes = copy.deepcopy(new_boxes)
+
+			# this is for debugging
+			print("Printing size of real_coor_boxes")
+			print(real_coor_boxes.size)
+			print("Printing shape of real_coor_boxes")
+			print(np.shape(real_coor_boxes))
+
+			# this is for debugging
+			print("Printing shape of new_boxes.shape[0]")
+			print(new_boxes.shape[0])
+
 			for jk in range(new_boxes.shape[0]):
 				(x1, y1, x2, y2) = new_boxes[jk,:]
+
+				# this is for debugging
+				print("Printing size of new_boxes[jk,:]")
+				print(new_boxes[jk,:].size)
+				print("Printing shape of new_boxes[jk,:]")
+				print(np.shape(new_boxes[jk,:]))
 
 				(real_x1, real_y1, real_x2, real_y2) = get_real_coordinates(ratio, x1, y1, x2, y2)
 
@@ -247,6 +283,12 @@ def test(image):
 				real_coor_boxes[jk][1] = real_y1
 				real_coor_boxes[jk][2] = real_x2
 				real_coor_boxes[jk][3] = real_y2
+
+				# this is for debugging
+				print("Printing size of real_coor_boxes[jk,:]")
+				print(real_coor_boxes[jk,:].size)
+				print("Printing shape of real_coor_boxes[jk,:]")
+				print(np.shape(new_boxes[jk,:]))
 
 				# not writing to cv2
 				# cv2.rectangle(img,(real_x1, real_y1), (real_x2, real_y2), (int(class_to_color[key][0]), int(class_to_color[key][1]), int(class_to_color[key][2])),2)
