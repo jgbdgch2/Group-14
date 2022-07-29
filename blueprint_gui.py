@@ -524,12 +524,16 @@ def feature_input_window(building_schedule, feature_name):
         values['-FEATURE LENGTH-'] = convert_to_inches(values['-FEATURE LENGTH-'])
     return values
 
-def edit_blueprint_wall_attachment(feature, pixel_ratio, wall_info):
+def edit_blueprint_wall_attachment(feature, pixel_ratio, wall_info, schedule_names):
     attachment_info = {}
     if type(feature) == type(bd.Door()):
+        schedule_name = feature.doorType.name
         attachment_info['-FEATURE-'] = 'Door'
+        list = schedule_names['-DOOR NAMES-']
     elif type(feature) == type(bd.Window()):
+        schedule_name = feature.windowType.name
         attachment_info['-FEATURE-'] = 'Window'
+        list = schedule_names['-WINDOW NAMES-']
     feature_info = get_feature_info(feature, attachment_info, wall_info)
     length = convert_to_feet_string(wall_info['-FEATURE LENGTH-'])
     width = convert_to_feet_string(wall_info['-FEATURE WIDTH-'])
@@ -553,20 +557,21 @@ def edit_blueprint_wall_attachment(feature, pixel_ratio, wall_info):
                         sg.Radio('Imperial', "Y", default=True, enable_events=True, key='-Y IS IMPERIAL-'),
                         sg.Radio('Metric', "Y", default=False, enable_events=True, key='-Y IS NOT IMPERIAL-')],
               [sg.Text('Wall Angle', size =(25, 1)), sg.Text(angle)],
+              [sg.Text('Frame Width', size =(25, 1)), sg.Text(attachment_width, size =(16, 1), key='-ATTACHMENT WIDTH-'),
+                        sg.Radio('Imperial', "W", default=True, enable_events=True, key='-W IS IMPERIAL-'),
+                        sg.Radio('Metric', "W", default=False, enable_events=True, key='-W IS NOT IMPERIAL-')],
+              [sg.Text('Frame Height', size =(25, 1)), sg.Text(attachment_height, size =(16, 1), key='-HEIGHT-'),
+                        sg.Radio('Imperial', "H", default=True, enable_events=True, key='-H IS IMPERIAL-'),
+                        sg.Radio('Metric', "H", default=False, enable_events=True, key='-H IS NOT IMPERIAL-')],
               [sg.Text('Distance from Center of wall', size =(25, 1)), sg.InputText(center_distance, size =(16, 1), key='-DISTANCE-'),
                         sg.Radio('Imperial', "D", default=True, enable_events=True, key='-D IS IMPERIAL-'),
                         sg.Radio('Metric', "D", default=False, enable_events=True, key='-D IS NOT IMPERIAL-')],
-              [sg.Text('Attachment Width', size =(25, 1)), sg.InputText(attachment_width, size =(16, 1), key='-ATTACHMENT WIDTH-'),
-                        sg.Radio('Imperial', "W", default=True, enable_events=True, key='-W IS IMPERIAL-'),
-                        sg.Radio('Metric', "W", default=False, enable_events=True, key='-W IS NOT IMPERIAL-')],
-              [sg.Text('Attachment Height', size =(25, 1)), sg.InputText(y_pos, size =(16, 1), key='-HEIGHT-'),
-                        sg.Radio('Imperial', "H", default=True, enable_events=True, key='-H IS IMPERIAL-'),
-                        sg.Radio('Metric', "H", default=False, enable_events=True, key='-H IS NOT IMPERIAL-')],
-              #[sg.Text('Feature Type:          '), sg.Combo(feat_list[feature_name], size=(10, 15),
-               #key='-FEATURE TYPE-', readonly=True)],
+              [sg.Text('Feature Type:', size =(25, 1)), sg.Combo(list, size=(24, 15),
+               key='-SCHEDULE NAME-', readonly=True)],
               [sg.Submit(bind_return_key=True), sg.Cancel()]]
 
-    window = sg.Window('Edit Feature', layout)
+    window = sg.Window('Edit Feature', layout).finalize()
+    window['-SCHEDULE NAME-'].update(schedule_name)
     while True:
         event, values = window.read()
         if event in (sg.WIN_CLOSED, 'Exit', 'Cancel'):
@@ -599,22 +604,22 @@ def edit_blueprint_wall_attachment(feature, pixel_ratio, wall_info):
             str = convert_to_meters_string(wall_info['-Y POS-'] * pixel_ratio)
             window['-Y POS-'].update(str)
         elif event == '-D IS IMPERIAL-':
-            str = convert_to_feet_string(feature_info['-DISTANCE-'] * pixel_ratio)
+            str = convert_to_feet_string(feature_info['-DISTANCE-'])
             window['-DISTANCE-'].update(str)
         elif event == '-D IS NOT IMPERIAL-':
-            str = convert_to_meters_string(feature_info['-DISTANCE-'] * pixel_ratio)
+            str = convert_to_meters_string(feature_info['-DISTANCE-'])
             window['-DISTANCE-'].update(str)
         elif event == '-W IS IMPERIAL-':
-            str = convert_to_feet_string(feature_info['-FEATURE LENGTH-'] * pixel_ratio)
+            str = convert_to_feet_string(feature_info['-FEATURE LENGTH-'])
             window['-ATTACHMENT WIDTH-'].update(str)
         elif event == '-W IS NOT IMPERIAL-':
-            str = convert_to_meters_string(feature_info['-FEATURE LENGTH-'] * pixel_ratio)
+            str = convert_to_meters_string(feature_info['-FEATURE LENGTH-'])
             window['-ATTACHMENT WIDTH-'].update(str)
         elif event == '-H IS IMPERIAL-':
-            str = convert_to_feet_string(feature_info['-HEIGHT-'] * pixel_ratio)
+            str = convert_to_feet_string(feature_info['-HEIGHT-'])
             window['-HEIGHT-'].update(str)
         elif event == '-H IS NOT IMPERIAL-':
-            str = convert_to_meters_string(feature_info['-HEIGHT-'] * pixel_ratio)
+            str = convert_to_meters_string(feature_info['-HEIGHT-'])
             window['-HEIGHT-'].update(str)
     window.close()
 
@@ -636,7 +641,7 @@ def edit_blueprint_wall_attachment(feature, pixel_ratio, wall_info):
     values['-FEATURE ANGLE-'] = float(values['-HEIGHT-'])
     return values
 
-def edit_blueprint_wall(feature, pixel_ratio):
+def edit_blueprint_wall(feature, pixel_ratio, list_wall_types):
     # feat_list
     feature_info = get_building_wall_info(feature)
     length = convert_to_feet_string(feature_info['-FEATURE LENGTH-'])
@@ -648,9 +653,6 @@ def edit_blueprint_wall(feature, pixel_ratio):
               [sg.Text('Length', size =(15, 1)), sg.InputText(length, key='-FEATURE LENGTH-'),
                         sg.Radio('Imperial', "LENGTH", default=True, enable_events=True, key='-LENGTH IS IMPERIAL-'),
                         sg.Radio('Metric', "LENGTH", default=False, enable_events=True, key='-LENGTH IS NOT IMPERIAL-')],
-              [sg.Text('Width', size =(15, 1)), sg.InputText(width, key='-FEATURE WIDTH-'),
-                        sg.Radio('Imperial', "WIDTH", default=True, enable_events=True, key='-WIDTH IS IMPERIAL-'),
-                        sg.Radio('Metric', "WIDTH", default=False, enable_events=True, key='-WIDTH IS NOT IMPERIAL-')],
               [sg.Text('X Center Position', size =(15, 1)), sg.InputText(x_pos, key='-X POS-'),
                         sg.Radio('Imperial', "X", default=True, enable_events=True, key='-X IS IMPERIAL-'),
                         sg.Radio('Metric', "X", default=False, enable_events=True, key='-X IS NOT IMPERIAL-')],
@@ -658,11 +660,15 @@ def edit_blueprint_wall(feature, pixel_ratio):
                         sg.Radio('Imperial', "Y", default=True, enable_events=True, key='-Y IS IMPERIAL-'),
                         sg.Radio('Metric', "Y", default=False, enable_events=True, key='-Y IS NOT IMPERIAL-')],
               [sg.Text('Angle', size =(15, 1)), sg.InputText(angle, key='-FEATURE ANGLE-')],
-              #[sg.Text('Feature Type:          '), sg.Combo(feat_list[feature_name], size=(10, 15),
-               #key='-FEATURE TYPE-', readonly=True)],
+              [sg.Text('Thickness', size =(15, 1)), sg.Text(width, size =(15, 1), key='-FEATURE WIDTH-'),
+               sg.Radio('Imperial', "WIDTH", default=True, enable_events=True, key='-WIDTH IS IMPERIAL-'),
+               sg.Radio('Metric', "WIDTH", default=False, enable_events=True, key='-WIDTH IS NOT IMPERIAL-')],
+              [sg.Text('Schedule Type:', size =(15, 1)), sg.Combo(list_wall_types, size=(30, 10),
+               key='-SCHEDULE NAME-', readonly=True)],
               [sg.Submit(bind_return_key=True), sg.Cancel()]]
 
-    window = sg.Window('Edit Feature', layout)
+    window = sg.Window('Edit Feature', layout).finalize()
+    window['-SCHEDULE NAME-'].update(feature.wallType.name)
     while True:
         event, values = window.read()
         if event in (sg.WIN_CLOSED, 'Exit', 'Cancel'):
@@ -700,11 +706,6 @@ def edit_blueprint_wall(feature, pixel_ratio):
         values['-FEATURE LENGTH-'] *= 0.393701
     else:
         values['-FEATURE LENGTH-'] = convert_to_inches(values['-FEATURE LENGTH-'])
-    if not values['-WIDTH IS IMPERIAL-']:
-        values['-FEATURE WIDTH-'] = convert_to_centimeters(values['-FEATURE WIDTH-'])
-        values['-FEATURE WIDTH-'] *= 0.393701
-    else:
-        values['-FEATURE WIDTH-'] = convert_to_inches(values['-FEATURE WIDTH-'])
     if not values['-X IS IMPERIAL-']:
         values['-X POS-'] = convert_to_centimeters(values['-X POS-'])
         values['-X POS-'] *= 0.393701 / pixel_ratio
@@ -717,24 +718,27 @@ def edit_blueprint_wall(feature, pixel_ratio):
     else:
         values['-Y POS-'] = convert_to_inches(values['-Y POS-'])
         values['-Y POS-'] /= pixel_ratio
-    values['-FEATURE ANGLE-'] = float(values['-FEATURE ANGLE-'])
+    try:
+        values['-FEATURE ANGLE-'] = float(values['-FEATURE ANGLE-'])
+    except:
+        values['-FEATURE ANGLE-'] = 0.0
     return values
 
 def update_window(window, window_info):
     window.position = window_info['-DISTANCE-']
     #window.sillHeight = window_info['-SILL HEIGHT-']
-    #window.windowType = window_info['-WINDOW TYPE-']
+    window.windowType = schedule.searchByName(window_info['-SCHEDULE NAME-'])
     #window.information = window_info['-WINDOW NOTES-']
 
-def update_door(door, door_info):
+def update_door(door, door_info, schedule):
     door.position = door_info['-DISTANCE-']
     #door.hingePos = door_info['-HINGE POSITION-']
-    #door.doorType = door_info['-DOOR TYPE-']
+    door.doorType = schedule.searchByName(door_info['-SCHEDULE NAME-'])
     #door.information = door_info['DOOR NOTES']
 
-def update_wall(wall, wall_info):
+def update_wall(wall, wall_info, schedule):
     wall.length = wall_info['-FEATURE LENGTH-']
-    wall.wallType.width = wall_info['-FEATURE WIDTH-']
+    wall.wallType = schedule.searchByName(wall_info['-SCHEDULE NAME-'])
     wall.xPos = wall_info['-X POS-']
     wall.yPos = wall_info['-Y POS-']
     wall.angle = wall_info['-FEATURE ANGLE-']
@@ -805,9 +809,7 @@ def get_schedule_number(building_schedule):
 
 def get_nearest_type(building_schedule, width, type):
     if type == 'Wall':
-        print('Length: {}'.format(building_schedule.listOfWallTypes[0].thickness))
         val = abs(building_schedule.listOfWallTypes[0].thickness - width)
-        print('Width: {}'.format(width))
         for wall_type in building_schedule.listOfWallTypes:
             if abs(wall_type.thickness - width) <= val:
                 val = abs(wall_type.thickness - width)
@@ -819,7 +821,7 @@ def get_nearest_type(building_schedule, width, type):
 
     return select_type
 
-def blueprint_schedule_creator(building_schedule):
+def blueprint_schedule_creator(building_schedule, add_only=True):
     schedule_type = get_all_schedule_names(building_schedule)
     type_number = get_schedule_number(building_schedule)
     left_col_schedule = [[sg.Text('', size =(35, 1), visible=True)], # Using this for padding control
@@ -888,17 +890,28 @@ def blueprint_schedule_creator(building_schedule):
             else:
                 values['-SILL HEIGHT-'] = convert_to_inches(values['-SILL HEIGHT-'])
             #--------------------------------------------------------------------------------------
-            type_number +=1
+            type_number += 1
+            master_list = []
+            for key in schedule_type:
+                for list in schedule_type[key]:
+                    master_list.append(list)
             if values['-SCHEDULE TYPE-'] == 'Wall':
-                if values['-SCHEDULE NAME-'] in schedule_type['-WALL NAMES-']:
+                if values['-SCHEDULE NAME-'] in master_list:
                     popup_info('Name already exists!')
+                    type_number -= 1
+                    continue
+                if values['-SCHEDULE NAME-'] == '' or values['-SCHEDULE WIDTH-'] <= 0:
                     continue
                 schedule = bd.WallType(typeNumber=type_number,
                                        name=values['-SCHEDULE NAME-'],
                                        thickness=values['-SCHEDULE WIDTH-'])
             elif values['-SCHEDULE TYPE-'] == 'Window':
-                if values['-SCHEDULE NAME-'] in schedule_type['-WINDOW NAMES-']:
+                if values['-SCHEDULE NAME-'] in master_list:
                     popup_info('Name already exists!')
+                    type_number -= 1
+                    continue
+                if values['-SCHEDULE NAME-'] == '' or values['-SCHEDULE WIDTH-'] <= 0 or\
+                   values['-SCHEDULE HEIGHT-'] <= 0 or values['-SILL HEIGHT-'] <= 0:
                     continue
                 schedule = bd.WindowType(typeNumber=type_number,
                                          name=values['-SCHEDULE NAME-'],
@@ -906,8 +919,12 @@ def blueprint_schedule_creator(building_schedule):
                                          width=values['-SCHEDULE WIDTH-'],
                                          sillHeight=values['-SILL HEIGHT-'])
             elif values['-SCHEDULE TYPE-'] == 'Door':
-                if values['-SCHEDULE NAME-'] in schedule_type['-DOOR NAMES-']:
+                if values['-SCHEDULE NAME-'] in master_list:
                     popup_info('Name already exists!')
+                    type_number -= 1
+                    continue
+                if values['-SCHEDULE NAME-'] == '' or values['-SCHEDULE WIDTH-'] <= 0 or\
+                   values['-SCHEDULE HEIGHT-'] <= 0:
                     continue
                 schedule = bd.DoorType(typeNumber=type_number,
                                        name=values['-SCHEDULE NAME-'],
@@ -919,58 +936,62 @@ def blueprint_schedule_creator(building_schedule):
             window['-WINDOW LIST-'].update(schedule_type['-WINDOW NAMES-'])
             window['-DOOR LIST-'].update(schedule_type['-DOOR NAMES-'])
         elif event in ('-WALL LIST-', '-WINDOW LIST-', '-DOOR LIST-'):
-            window['-DELETE SCHEDULE-'].update(visible=True)
+            if not add_only:
+                window['-DELETE SCHEDULE-'].update(visible=True)
             if event == '-WALL LIST-':
                 window['-WINDOW LIST-'].set_value([])
                 window['-DOOR LIST-'].set_value([])
-                wall_type = building_schedule.searchByName(values['-WALL LIST-'][0])
-                window['-SCHEDULE NAME-'].update(wall_type.name)
-                if values['-W IS IMPERIAL-']:
-                    str = convert_to_feet_string(wall_type.thickness)
-                else:
-                    str = convert_to_meters_string(wall_type.thickness)
-                window['-SCHEDULE WIDTH-'].update(str)
-                window['-SCHEDULE TYPE-'].update('Wall')
-                window['-SCHEDULE HEIGHT-'].update('')
-                window['-SILL HEIGHT-'].update('')
+                if len(values['-WALL LIST-']) > 0:
+                    wall_type = building_schedule.searchByName(values['-WALL LIST-'][0])
+                    window['-SCHEDULE NAME-'].update(wall_type.name)
+                    if values['-W IS IMPERIAL-']:
+                        str = convert_to_feet_string(wall_type.thickness)
+                    else:
+                        str = convert_to_meters_string(wall_type.thickness)
+                    window['-SCHEDULE WIDTH-'].update(str)
+                    window['-SCHEDULE TYPE-'].update('Wall')
+                    window['-SCHEDULE HEIGHT-'].update('')
+                    window['-SILL HEIGHT-'].update('')
             elif event == '-WINDOW LIST-':
                 window['-WALL LIST-'].set_value([])
                 window['-DOOR LIST-'].set_value([])
-                window_type = building_schedule.searchByName(values['-WINDOW LIST-'][0])
-                window['-SCHEDULE NAME-'].update(window_type.name)
-                if values['-W IS IMPERIAL-']:
-                    str = convert_to_feet_string(window_type.width)
-                else:
-                    str = convert_to_meters_string(window_type.width)
-                window['-SCHEDULE WIDTH-'].update(str)
-                if values['-H IS IMPERIAL-']:
-                    str = convert_to_feet_string(window_type.height)
-                else:
-                    str = convert_to_meters_string(window_type.height)
-                window['-SCHEDULE HEIGHT-'].update(str)
-                if values['-S IS IMPERIAL-']:
-                    str = convert_to_feet_string(window_type.sillHeight)
-                else:
-                    str = convert_to_meters_string(window_type.sillHeight)
-                window['-SILL HEIGHT-'].update(str)
-                window['-SCHEDULE TYPE-'].update('Window')
+                if len(values['-WINDOW LIST-']) > 0:
+                    window_type = building_schedule.searchByName(values['-WINDOW LIST-'][0])
+                    window['-SCHEDULE NAME-'].update(window_type.name)
+                    if values['-W IS IMPERIAL-']:
+                        str = convert_to_feet_string(window_type.width)
+                    else:
+                        str = convert_to_meters_string(window_type.width)
+                    window['-SCHEDULE WIDTH-'].update(str)
+                    if values['-H IS IMPERIAL-']:
+                        str = convert_to_feet_string(window_type.height)
+                    else:
+                        str = convert_to_meters_string(window_type.height)
+                    window['-SCHEDULE HEIGHT-'].update(str)
+                    if values['-S IS IMPERIAL-']:
+                        str = convert_to_feet_string(window_type.sillHeight)
+                    else:
+                        str = convert_to_meters_string(window_type.sillHeight)
+                    window['-SILL HEIGHT-'].update(str)
+                    window['-SCHEDULE TYPE-'].update('Window')
             elif event == '-DOOR LIST-':
                 window['-WINDOW LIST-'].set_value([])
                 window['-WALL LIST-'].set_value([])
-                door_type = building_schedule.searchByName(values['-DOOR LIST-'][0])
-                window['-SCHEDULE NAME-'].update(door_type.name)
-                if values['-W IS IMPERIAL-']:
-                    str = convert_to_feet_string(door_type.width)
-                else:
-                    str = convert_to_meters_string(door_type.width)
-                window['-SCHEDULE WIDTH-'].update(str)
-                if values['-H IS IMPERIAL-']:
-                    str = convert_to_feet_string(door_type.height)
-                else:
-                    str = convert_to_meters_string(door_type.height)
-                window['-SCHEDULE HEIGHT-'].update(str)
-                window['-SCHEDULE TYPE-'].update('Door')
-                window['-SILL HEIGHT-'].update('')
+                if len(values['-DOOR LIST-']) > 0:
+                    door_type = building_schedule.searchByName(values['-DOOR LIST-'][0])
+                    window['-SCHEDULE NAME-'].update(door_type.name)
+                    if values['-W IS IMPERIAL-']:
+                        str = convert_to_feet_string(door_type.width)
+                    else:
+                        str = convert_to_meters_string(door_type.width)
+                    window['-SCHEDULE WIDTH-'].update(str)
+                    if values['-H IS IMPERIAL-']:
+                        str = convert_to_feet_string(door_type.height)
+                    else:
+                        str = convert_to_meters_string(door_type.height)
+                    window['-SCHEDULE HEIGHT-'].update(str)
+                    window['-SCHEDULE TYPE-'].update('Door')
+                    window['-SILL HEIGHT-'].update('')
         elif event == '-DELETE SCHEDULE-':
             if len(values['-WALL LIST-']) > 0:
                 wall_type = building_schedule.searchByName(values['-WALL LIST-'][0])
@@ -1133,6 +1154,9 @@ def delete_wall_attachment(graph, feature_dict, attachment, list_attachment):
     feature_dict.pop(feature_ID)
     del list_attachment[list_attachment.index(attachment)]
 
+def dist(one, two):
+    return math.sqrt( (two[0] - one[0])**2 + (two[1] - one[1])**2 )
+
 def attachment_translate_with_wall(graph, feature_dict, delta_x, delta_y, wall_id):
     # Get all the feature IDs from any attachments with the parent ID of the wall
     feature_IDs = [k for k, v in feature_dict.items() if (type(v) == type(bd.Door()) or
@@ -1150,7 +1174,7 @@ def attachment_translate_along_wall(graph, feature_dict, delta_x, delta_y, fig_i
         slope = math.tan(rotate_angle)
         center = get_center_coordinates(graph, fig_id)
         pos = center[0] + delta_x, center[1] + delta_y
-        distance = math.dist([wall.xPos * pixel_ratio, wall.yPos * pixel_ratio], [pos[0], pos[1]])
+        distance = dist([wall.xPos * pixel_ratio, wall.yPos * pixel_ratio], [pos[0], pos[1]])
         if distance >= wall.length / 2 * pixel_ratio:
             return
         if (angle <= 225 and angle >= 135) or (angle <= 45 and angle >= 0) or \
@@ -1162,7 +1186,7 @@ def attachment_translate_along_wall(graph, feature_dict, delta_x, delta_y, fig_i
         center = get_center_coordinates(graph, fig_id)
         x_positive = center[0] - wall.xPos * pixel_ratio
         y_positive = center[1] - wall.yPos * pixel_ratio
-        final_distance = math.dist([wall.xPos * pixel_ratio, wall.yPos * pixel_ratio], [center[0], center[1]])
+        final_distance = dist([wall.xPos * pixel_ratio, wall.yPos * pixel_ratio], [center[0], center[1]])
         if x_positive > 0:
             x_positive = True
         else:
@@ -1192,7 +1216,7 @@ def main_gui():
     graph2_menu_def = ['&Right', ['Edit', 'Duplicate', 'Insert', 'Delete', 'Toggle']]
     # First is the top menu
     menu_def = [['&File', ['&New       ALT-N', '&Quick Save', '&Load Recent', 'E&xit']],
-                ['&Edit', ['Extract Feature', '!Add Story']],
+                ['&Edit', ['Extract Feature', '!Add Story', 'Add To Schedule']],
                 ['Se&ttings', ['&Window Settings', '!Help']]]
 
     # Second the window layout...2 columns
@@ -1326,6 +1350,7 @@ def main_gui():
                 orig_img = a_set = bound_top = bound_bottom = fig = a_point = y_pixel_ratio = None
                 x_pixel_ratio = feature_path = user_distance = prior_rect = start_point1 = None
                 end_point1 = None
+                #buildingData = bd.BuildingData()
                 feature_dict = {}
         elif event == '-LOADED PDF-':
             if graph2:
@@ -1336,7 +1361,7 @@ def main_gui():
             if not orig_img:
                 popup_info('Page Not Found!')
                 continue
-            blueprint_schedule_creator(buildingData.buildingSchedule)
+            blueprint_schedule_creator(buildingData.buildingSchedule, add_only=False)
             img = resize_img(orig_img, (new_size, new_size))
             graph1 = window["-GRAPH1-"]  # type: sg.Graph
             graph1.erase()
@@ -1610,16 +1635,18 @@ def main_gui():
                 popup_info('No Feature selected')
                 continue
             edit_feature = feature_dict[select_fig]
+            schedule_names = get_all_schedule_names(buildingData.buildingSchedule)
             if type(edit_feature) == type(bd.Wall()):
-                new_info = edit_blueprint_wall(edit_feature, x_pixel_ratio)
+                new_info = edit_blueprint_wall(edit_feature, x_pixel_ratio,
+                                               schedule_names['-WALL NAMES-'])
                 if new_info != None:
-                    update_wall(edit_feature, new_info)
+                    update_wall(edit_feature, new_info, buildingData.buildingSchedule)
                     erase_wall(graph2, feature_dict, select_fig)
                     draw_wall_and_attachments(graph2, folder, feature_images,
                                         edit_feature, x_pixel_ratio, feature_dict=feature_dict)
             elif type(edit_feature) == type(bd.Door()):
                 wall_info = get_building_wall_info(feature_dict[edit_feature.parentID])
-                new_info = edit_blueprint_wall_attachment(edit_feature, x_pixel_ratio, wall_info)
+                new_info = edit_blueprint_wall_attachment(edit_feature, x_pixel_ratio, wall_info, schedule_names)
                 if new_info != None:
                     update_door(edit_feature, new_info)
                     erase_wall_attachment(graph2, feature_dict, edit_feature)
@@ -1630,7 +1657,7 @@ def main_gui():
                     feature_dict[edit_id] = edit_feature
             elif type(edit_feature) == type(bd.Window()):
                 wall_info = get_building_wall_info(feature_dict[edit_feature.parentID])
-                new_info = edit_blueprint_wall_attachment(edit_feature, x_pixel_ratio, wall_info)
+                new_info = edit_blueprint_wall_attachment(edit_feature, x_pixel_ratio, wall_info, schedule_names)
                 if new_info != None:
                     update_window(edit_feature, new_info)
                     erase_wall_attachment(graph2, feature_dict, edit_feature)
@@ -1760,6 +1787,7 @@ def main_gui():
             graph1.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
             crop = False
             buildingData = bd.readJSON("save.json")
+            blueprint_schedule_creator(buildingData.buildingSchedule, add_only=False)
             if settings['-SAVE CONVERT-']:
                 save_convert = True
                 graph2 = window["-GRAPH2-"]  # type: sg.Graph
@@ -1778,6 +1806,8 @@ def main_gui():
             orig_img.save('./blueprint_features/save.png')
             bd.writeJSON(buildingData, "save.json")
             popup_info('Saved!')
+        elif  event == 'Add To Schedule':
+            blueprint_schedule_creator(buildingData.buildingSchedule)
     # --------------------------------- Close & Exit ---------------------------------
     window.close()
 
