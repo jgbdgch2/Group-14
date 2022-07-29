@@ -242,6 +242,7 @@ def test(image):
 	print(bboxes)
 	print("Printing length of bboxes")
 	print(len(bboxes))
+	print(bboxes.keys())
 
 	all_dets = []
 
@@ -249,39 +250,48 @@ def test(image):
 		bbox = np.array(bboxes[key])
 
 		# this is for debugging
-		print("Printing size of bbox which is inside for loop")
-		print(bbox.size)
-		print("Printing shape of bbox")
-		print(np.shape(bbox))
+		# print("Printing size of bbox which is inside for loop")
+		# print(bbox.size)
+		# print("Printing shape of bbox")
+		# print(np.shape(bbox))
 
 		new_boxes, new_probs = roi_helpers.non_max_suppression_fast(bbox, np.array(probs[key]), overlap_thresh=0.5)
 
 		# this is for debugging
-		print("Printing size of new_boxes")
-		print(new_boxes.size)
-		print("Printing shape of new_boxes")
-		print(np.shape(new_boxes))
+		# print("Printing size of new_boxes")
+		# print(new_boxes.size)
+		# print("Printing shape of new_boxes")
+		# print(np.shape(new_boxes))
 
 		real_coor_boxes = copy.deepcopy(new_boxes)
 
 		# this is for debugging
-		print("Printing size of real_coor_boxes")
-		print(real_coor_boxes.size)
-		print("Printing shape of real_coor_boxes")
-		print(np.shape(real_coor_boxes))
+		# print("Printing size of real_coor_boxes")
+		# print(real_coor_boxes.size)
+		# print("Printing shape of real_coor_boxes")
+		# print(np.shape(real_coor_boxes))
 
 		# this is for debugging
-		print("Printing shape of new_boxes.shape[0]")
-		print(new_boxes.shape[0])
+		# print("Printing shape of new_boxes.shape[0]")
+		# print(new_boxes.shape[0])
 
 		for jk in range(new_boxes.shape[0]):
 			(x1, y1, x2, y2) = new_boxes[jk,:]
 
 			# this is for debugging
-			print("Printing size of new_boxes[jk,:]")
-			print(new_boxes[jk,:].size)
-			print("Printing shape of new_boxes[jk,:]")
-			print(np.shape(new_boxes[jk,:]))
+			# print("Printing size of new_boxes[jk,:]")
+			# print(new_boxes[jk,:].size)
+			# print("Printing shape of new_boxes[jk,:]")
+			# print(np.shape(new_boxes[jk,:]))
+
+			# this is for debugging
+			# print("This is x1")
+			# print(x1)
+			# print("This is new_boxes[jk][0]")
+			# print(new_boxes[jk][0])
+			# print("This is new_boxes[jk,:]")
+			# print(new_boxes[jk,:])
+
 
 			(real_x1, real_y1, real_x2, real_y2) = get_real_coordinates(ratio, x1, y1, x2, y2)
 
@@ -290,11 +300,19 @@ def test(image):
 			real_coor_boxes[jk][2] = real_x2
 			real_coor_boxes[jk][3] = real_y2
 
+			# This is for debugging
+			# print("This is real_x1")
+			# print(real_x1)
+			# print("This is real_coor_boxes[jk][0]")
+			# print(real_coor_boxes[jk][0])
+			# print("This is real_coor_boxes[jk,:]")
+			# print(real_coor_boxes[jk,:])
+
 			# this is for debugging
-			print("Printing size of real_coor_boxes[jk,:]")
-			print(real_coor_boxes[jk,:].size)
-			print("Printing shape of real_coor_boxes[jk,:]")
-			print(np.shape(new_boxes[jk,:]))
+			# print("Printing size of real_coor_boxes[jk,:]")
+			# print(real_coor_boxes[jk,:].size)
+			# print("Printing shape of real_coor_boxes[jk,:]")
+			# print(np.shape(new_boxes[jk,:]))
 
 			# not writing to cv2
 			# cv2.rectangle(img,(real_x1, real_y1), (real_x2, real_y2), (int(class_to_color[key][0]), int(class_to_color[key][1]), int(class_to_color[key][2])),2)
