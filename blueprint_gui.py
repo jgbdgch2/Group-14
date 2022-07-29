@@ -14,7 +14,7 @@ import cv2
 
 import building_data as bd
 import ifc_compiler as ifc
-import measurement_marker_detector as mmd
+#import measurement_marker_detector as mmd
 
 #Will added this
 import importlib
@@ -358,19 +358,19 @@ def convert_to_meters_string(value):
         return '-' + str(front) + back
     return str(front) + back
 
-def feature_extractor_window(available_features):
-    layout = [[sg.Text('Information Required for Feature Extraction')],
-              [sg.Text('Feature Name', size =(15, 1)), sg.InputText(key='-FEATURE NAME-')],
-              [sg.Text('Feature Type:          '), sg.Combo(available_features, size=(10, 15),
-               key='-FEATURE TYPE-', readonly=True)],
+'''def feature_extractor_window(wall_names):
+    layout = [[sg.Text('Select wall for Feature Extraction')],
+              [sg.Text('Schedule Type:', size=(15, 1)), sg.Combo(wall_names, size=(30, 10),
+               key='-SCHEDULE NAME-', readonly=True)],
               [sg.Submit(bind_return_key=True), sg.Cancel()]]
 
-    window = sg.Window('Feature Extraction Tool', layout)
+    window = sg.Window('Feature Extraction Tool', layout).finalize()
+    window['-SCHEDULE NAME-'].update(wall_names[0])
     event, values = window.read()
     window.close()
-    if event in (sg.WIN_CLOSED, 'Exit', 'Cancel') or values['-FEATURE TYPE-'] == '':
+    if event in (sg.WIN_CLOSED, 'Exit', 'Cancel') or values['-SCHEDULE NAME-'] == '':
         return None
-    return values
+    return values'''
 
 def story_input_tool(name):
     layout = [[sg.Text('Please enter the new story information')],
@@ -628,17 +628,6 @@ def edit_blueprint_wall_attachment(feature, pixel_ratio, wall_info, schedule_nam
         values['-DISTANCE-'] *= 0.393701
     else:
         values['-DISTANCE-'] = convert_to_inches(values['-DISTANCE-'])
-    if not values['-W IS IMPERIAL-']:
-        values['-ATTACHMENT WIDTH-'] = convert_to_centimeters(values['-ATTACHMENT WIDTH-'])
-        values['-ATTACHMENT WIDTH-'] *= 0.393701
-    else:
-        values['-ATTACHMENT WIDTH-'] = convert_to_inches(values['-ATTACHMENT WIDTH-'])
-    if not values['-H IS IMPERIAL-']:
-        values['-HEIGHT-'] = convert_to_centimeters(values['-HEIGHT-'])
-        values['-HEIGHT-'] *= 0.393701
-    else:
-        values['-HEIGHT-'] = convert_to_inches(values['-HEIGHT-'])
-    values['-FEATURE ANGLE-'] = float(values['-HEIGHT-'])
     return values
 
 def edit_blueprint_wall(feature, pixel_ratio, list_wall_types):
@@ -724,7 +713,7 @@ def edit_blueprint_wall(feature, pixel_ratio, list_wall_types):
         values['-FEATURE ANGLE-'] = 0.0
     return values
 
-def update_window(window, window_info):
+def update_window(window, window_info, schedule):
     window.position = window_info['-DISTANCE-']
     #window.sillHeight = window_info['-SILL HEIGHT-']
     window.windowType = schedule.searchByName(window_info['-SCHEDULE NAME-'])
@@ -889,6 +878,10 @@ def blueprint_schedule_creator(building_schedule, add_only=True):
                 values['-SILL HEIGHT-'] *= 0.393701
             else:
                 values['-SILL HEIGHT-'] = convert_to_inches(values['-SILL HEIGHT-'])
+            window['-SCHEDULE NAME-'].update('')
+            window['-SCHEDULE WIDTH-'].update('')
+            window['-SCHEDULE HEIGHT-'].update('')
+            window['-SILL HEIGHT-'].update('')
             #--------------------------------------------------------------------------------------
             type_number += 1
             master_list = []
@@ -936,12 +929,13 @@ def blueprint_schedule_creator(building_schedule, add_only=True):
             window['-WINDOW LIST-'].update(schedule_type['-WINDOW NAMES-'])
             window['-DOOR LIST-'].update(schedule_type['-DOOR NAMES-'])
         elif event in ('-WALL LIST-', '-WINDOW LIST-', '-DOOR LIST-'):
-            if not add_only:
-                window['-DELETE SCHEDULE-'].update(visible=True)
             if event == '-WALL LIST-':
                 window['-WINDOW LIST-'].set_value([])
                 window['-DOOR LIST-'].set_value([])
+                window['-DELETE SCHEDULE-'].update(visible=False)
                 if len(values['-WALL LIST-']) > 0:
+                    if not add_only:
+                        window['-DELETE SCHEDULE-'].update(visible=True)
                     wall_type = building_schedule.searchByName(values['-WALL LIST-'][0])
                     window['-SCHEDULE NAME-'].update(wall_type.name)
                     if values['-W IS IMPERIAL-']:
@@ -955,7 +949,10 @@ def blueprint_schedule_creator(building_schedule, add_only=True):
             elif event == '-WINDOW LIST-':
                 window['-WALL LIST-'].set_value([])
                 window['-DOOR LIST-'].set_value([])
+                window['-DELETE SCHEDULE-'].update(visible=False)
                 if len(values['-WINDOW LIST-']) > 0:
+                    if not add_only:
+                        window['-DELETE SCHEDULE-'].update(visible=True)
                     window_type = building_schedule.searchByName(values['-WINDOW LIST-'][0])
                     window['-SCHEDULE NAME-'].update(window_type.name)
                     if values['-W IS IMPERIAL-']:
@@ -977,7 +974,10 @@ def blueprint_schedule_creator(building_schedule, add_only=True):
             elif event == '-DOOR LIST-':
                 window['-WINDOW LIST-'].set_value([])
                 window['-WALL LIST-'].set_value([])
+                window['-DELETE SCHEDULE-'].update(visible=False)
                 if len(values['-DOOR LIST-']) > 0:
+                    if not add_only:
+                        window['-DELETE SCHEDULE-'].update(visible=True)
                     door_type = building_schedule.searchByName(values['-DOOR LIST-'][0])
                     window['-SCHEDULE NAME-'].update(door_type.name)
                     if values['-W IS IMPERIAL-']:
@@ -1213,7 +1213,7 @@ def main_gui():
     # --------------------------------- Define Layout ---------------------------------
     # Right click menu for graphs
     graph1_menu_def = ['&Right', ['Rotate', 'Set Distance']]
-    graph2_menu_def = ['&Right', ['Edit', 'Duplicate', 'Insert', 'Delete', 'Toggle']]
+    graph2_menu_def = ['&Right', ['Edit', '!Duplicate', 'Insert', 'Delete', 'Toggle']]
     # First is the top menu
     menu_def = [['&File', ['&New       ALT-N', '&Quick Save', '&Load Recent', 'E&xit']],
                 ['&Edit', ['Extract Feature', '!Add Story', 'Add To Schedule']],
@@ -1308,11 +1308,12 @@ def main_gui():
 
     window_width, window_height = window.get_screen_dimensions()
     window_size = (window_width * width_percent, window_height * height_percent)
-    dragging1 = dragging2 = crop = set_distance = extract_feature = False
+    dragging1 = dragging2 = crop = set_distance = extract_feature = load_cancel = False
     start_point = end_point = filename = feature_name = select_fig = img = None
     orig_img = a_set = bound_top = bound_bottom = fig = a_point = y_pixel_ratio = None
     x_pixel_ratio = feature_path = user_distance = prior_rect = start_point1 = None
     end_point1 = graph2 = start_point2 = data = new_size = save_convert = None
+    blueprint_2_ID = None
     feature_dict = {}
     # --------------------------------- Event Loop ---------------------------------
     while True:
@@ -1339,20 +1340,24 @@ def main_gui():
                 story_info = story_input_tool('First Floor')
                 while not story_info or story_info['-BOTTOM ELEVATION-'] >= story_info['-TOP ELEVATION-']:
                     if story_info == None:
-                        popup_info('Story Information must be correctly added')
-                        story_info = story_input_tool('First Floor')
+                        load_cancel = True
+                        break
                     else:
                         story_info = story_input_tool(story_info['-STORY NAME-'])
-                buildingData.appendStory(bottomElevation = story_info['-BOTTOM ELEVATION-'],
-                                        topElevation = story_info['-TOP ELEVATION-'])
-                popup_info('Searching for Blueprint...')
-                start_point = end_point = filename = feature_name = select_fig = img = None
-                orig_img = a_set = bound_top = bound_bottom = fig = a_point = y_pixel_ratio = None
-                x_pixel_ratio = feature_path = user_distance = prior_rect = start_point1 = None
-                end_point1 = None
-                #buildingData = bd.BuildingData()
-                feature_dict = {}
+                if not load_cancel:
+                    buildingData = bd.BuildingData()
+                    buildingData.appendStory(bottomElevation = story_info['-BOTTOM ELEVATION-'],
+                                            topElevation = story_info['-TOP ELEVATION-'])
+                    popup_info('Searching for Blueprint...')
+                    start_point = end_point = filename = feature_name = select_fig = img = None
+                    orig_img = a_set = bound_top = bound_bottom = fig = a_point = y_pixel_ratio = None
+                    x_pixel_ratio = feature_path = user_distance = prior_rect = start_point1 = None
+                    end_point1 = blueprint_2_ID = None
+                    feature_dict = {}
         elif event == '-LOADED PDF-':
+            if load_cancel:
+                load_cancel = False
+                continue
             if graph2:
                 graph2.erase()
                 graph2 = None
@@ -1491,7 +1496,8 @@ def main_gui():
                         graph1.set_size(temp_img.size)
                         graph1.change_coordinates((0,0), (temp_img.size[0], temp_img.size[1]))
                         temp = graph1.draw_image(data=convert_to_bytes(temp_img), location=(0, temp_img.size[1]))'''
-                        feature_info = feature_extractor_window(available_features)
+                        '''schedule_names = get_all_schedule_names(buildingData.buildingSchedule)
+                        feature_info = feature_extractor_window(schedule_names['-WALL NAMES-'])'''
                         '''
                         # Used for trouble shooting
                         graph1.delete_figure(temp)
@@ -1499,9 +1505,10 @@ def main_gui():
                         graph1.change_coordinates((0,0), (img.size[0], img.size[1]))
                         graph1.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
                         '''
-                        if not feature_info:
+                        '''if not feature_info:
+                            graph1.delete_figure(prior_rect)
                             popup_info('Feature information required for feature extraction')
-                            continue
+                            continue'''
                         # Extract features here
                         # image, bounds, pixel_ratio, wall_string
                         # return wall object with no wall type just a float
@@ -1519,9 +1526,14 @@ def main_gui():
                             result = mmd.feature_data_extractor(send_img,
                                                                      bounding_box,
                                                                      x_pixel_ratio * h,
-                                                                     feature_info['-FEATURE TYPE-'])
+                                                                     'Wall')
                         except:
                             result = None
+
+                        '''data = bd.testCode()
+                        wall = data.listOfStories[0].listOfWalls[1]
+                        result = wall, 16.0'''
+
                         # Features extracted
                         graph1.delete_figure(prior_rect)
                         switch_to_other_graph(window, '-GRAPH1-', graph1, '-GRAPH2-', graph2, window_size)
@@ -1529,7 +1541,7 @@ def main_gui():
                         if result:
                             wall_object, width = result
                             wall_object.wallType = get_nearest_type(buildingData.buildingSchedule,
-                                                                    width, feature_info['-FEATURE TYPE-'])
+                                                                    width, 'Wall')
                             wall_object.typeNumber = wall_object.wallType.typeNumber
                             buildingData.listOfStories[story].append(wall_object)
                             draw_wall_and_attachments(window['-GRAPH2-'], folder, feature_images,
@@ -1659,7 +1671,7 @@ def main_gui():
                 wall_info = get_building_wall_info(feature_dict[edit_feature.parentID])
                 new_info = edit_blueprint_wall_attachment(edit_feature, x_pixel_ratio, wall_info, schedule_names)
                 if new_info != None:
-                    update_window(edit_feature, new_info)
+                    update_window(edit_feature, new_info, buildingData.buildingSchedule)
                     erase_wall_attachment(graph2, feature_dict, edit_feature)
                     window_info = {}
                     window_info['-FEATURE-'] = 'Window'
@@ -1702,6 +1714,7 @@ def main_gui():
                 draw_wall_and_attachments(graph2, folder, feature_images, feature_object, x_pixel_ratio, feature_dict=feature_dict)
         elif  event == 'Rotate' and not graph2 and not crop:
             img = img.transpose(PIL.Image.ROTATE_90)
+            orig_img = orig_img.transpose(PIL.Image.ROTATE_90)
             graph1 = window["-GRAPH1-"]  # type: sg.Graph
             graph1.erase()
             graph1.set_size(window_size)
@@ -1773,6 +1786,7 @@ def main_gui():
             new_size = int(window_size[1] * image_window_percent)
             mult = image_resolution // new_size
             img = resize_img(orig_img, (new_size, new_size))
+            blueprint_2_image = copy.deepcopy(img)
             x_pixel_ratio = settings['-X RATIO-']
             y_pixel_ratio = settings['-Y RATIO-']
             img = resize_img(orig_img, (new_size, new_size))
@@ -1787,7 +1801,6 @@ def main_gui():
             graph1.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
             crop = False
             buildingData = bd.readJSON("save.json")
-            blueprint_schedule_creator(buildingData.buildingSchedule, add_only=False)
             if settings['-SAVE CONVERT-']:
                 save_convert = True
                 graph2 = window["-GRAPH2-"]  # type: sg.Graph
