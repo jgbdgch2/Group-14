@@ -262,9 +262,9 @@ class WindowType:
     def __init__(self, \
                 typeNumber=-1, \
                 name="Nameless", \
-                height=-1.0, \
-                width=-1.0, \
-                sillHeight=-1.0):
+                height=1.0, \
+                width=1.0, \
+                sillHeight=1.0):
                 #measurement_system_flag="IMPERIAL_UNITS"):
 
         #Bound and type checking goes here
@@ -503,7 +503,7 @@ class Window:
 
     def __init__(self, \
                 position=np.inf, \
-                sillHeight=np.inf, \
+                sillHeight=0.0, \
                 directionFacing=-1, \
                 windowType=WindowType()):
 

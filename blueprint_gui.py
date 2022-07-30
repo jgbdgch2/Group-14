@@ -14,7 +14,7 @@ import cv2
 
 import building_data as bd
 import ifc_compiler as ifc
-#import measurement_marker_detector as mmd
+import measurement_marker_detector as mmd
 
 #Will added this
 import importlib
