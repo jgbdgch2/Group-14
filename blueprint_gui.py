@@ -11,6 +11,7 @@ import tkinter
 import copy
 import math
 import cv2
+import cairo
 
 import building_data as bd
 import ifc_compiler as ifc
@@ -57,7 +58,7 @@ def make_black(image):
     for item in image.getdata():
         if item == (0 ,0, 0, 0):
             newImage.append((255, 255, 255, 0))
-        elif item < (255, 255, 255, 255):
+        elif item < (5, 5, 5, 5):
             newImage.append((0, 0, 0, 255))
         else:
             newImage.append(item)
@@ -326,9 +327,9 @@ def convert_to_meters_string(value):
     if value < 0:
         value *= -1
         negative = True
-    centimeters = value * 2.54
-    if centimeters >= 100:
-        meters = centimeters / 100
+    centimeters = value * 25.4
+    if centimeters >= 1000:
+        meters = centimeters / 1000
         front = int(meters)
         back = meters - front
         back = str(float(back))
@@ -337,7 +338,7 @@ def convert_to_meters_string(value):
             back = back[:7]
         back = back + 'm'
     elif centimeters < 1:
-        meters = centimeters * 10
+        meters = centimeters * 100
         front = int(meters)
         back = meters - front
         back = str(float(back))
@@ -346,7 +347,7 @@ def convert_to_meters_string(value):
             back = back[:7]
         back = back + 'mm'
     else:
-        meters = centimeters
+        meters = centimeters/10
         front = int(meters)
         back = meters - front
         back = str(float(back))
@@ -1041,6 +1042,74 @@ def get_building_wall_info(building_wall):
                    }
     return feature_info
 
+def make_svg_door(path, length, thickness):
+    length *= 2
+    y = thickness/length
+    if thickness >= length:
+        y = 0.5
+    top = 0.5 - y/2
+    bottom = 1 - 2 * top
+    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, length, length)
+    ctx = cairo.Context(surface)
+    ctx.scale(length, length)  # Normalizing the canvas between 0 and 1
+    ctx.rectangle(0.25, 0, 1, 1)
+    ctx.clip()
+    ctx.rectangle(0, 0, 1, 0.5)
+    ctx.clip()
+    ctx.arc(0.25, 0.5, 0.5, 0, 2 * math.pi)
+    ctx.clip()
+    ctx.set_source_rgb(0.7, 0.7, 0.9)
+    ctx.rectangle(0.25, 0, 0.5, 0.5)
+    ctx.fill()
+    ctx.reset_clip()
+    ctx.set_source_rgba(0.5, 0.5, 0.7, 0.8)
+    ctx.rectangle(0.25, top, 0.5, bottom)
+    ctx.fill()
+    ctx.set_source_rgb(0, 0, 0)
+    ctx.rectangle(0.255, top, 0.03, bottom)
+    ctx.fill()
+    ctx.rectangle(0.725, top, 0.03, bottom)
+    ctx.fill()
+    surface.write_to_png(path)  # Output to PNG
+
+def make_svg_window(path, length, width):
+    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, length, width)
+    # creating a cairo context object
+    ctx = cairo.Context(surface)
+    ctx.scale(length, width)  # Normalizing the canvas between 0 and 1
+    # creating a rectangle
+    ctx.set_source_rgb(0.7, 0.7, 0.9)
+    ctx.rectangle(0, 0, length, width)
+    ctx.fill()
+    ctx.set_source_rgb(0, 0, 0)
+    ctx.rectangle(0, 0, 0.1, 1)
+    ctx.fill()
+    ctx.rectangle(0.9, 0, 1, 1)
+    ctx.fill()
+    surface.write_to_png(path)  # Output to PNG
+
+def make_svg_wall(path, length, width):
+    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, length, width)
+    ctx = cairo.Context(surface)
+    ctx.scale(length, width)  # Normalizing the canvas
+    pat = cairo.LinearGradient(0.0, 0.0, 0.0, 1.0)
+    pat.add_color_stop_rgba(0.5, 0.2, 0.2, 0.7, 0.5)  # First stop, 50% opacity
+    pat.add_color_stop_rgba(0.5, 0.5, 0.5, 0.9, 0.9)  # Last stop, 90% opacity
+
+    ctx.rectangle(0, 0, 1, 1)  # Rectangle(x0, y0, xd, yd) # d = distance from origin
+    ctx.set_source(pat)
+    ctx.fill()
+    surface.write_to_png(path)  # Output to PNG
+
+def make_svg_picture(folder, file_name, length, width):
+    feature_path = os.path.join(folder, file_name)
+    if file_name == 'wall.png':
+        make_svg_wall(feature_path, length, width)
+    elif file_name == 'window.png':
+        make_svg_window(feature_path, length, width)
+    elif file_name == 'door.png':
+        make_svg_door(feature_path, length, width)
+
 def graph_draw_from_data(story, graph, feature_dict, pixel_ratio, folder, feature_images):
     for wall in story.listOfWalls:
         draw_wall_and_attachments(graph, folder, feature_images, wall, pixel_ratio, feature_dict=feature_dict)
@@ -1055,6 +1124,8 @@ def draw_wall_and_attachments(graph, folder, feature_images, wall, pixel_ratio, 
     window_info = {}
     door_info['-FEATURE-'] = 'Door'
     window_info['-FEATURE-'] = 'Window'
+    door_info['-FEATURE WIDTH-'] = wall_info['-FEATURE WIDTH-']
+    window_info['-FEATURE WIDTH-'] = wall_info['-FEATURE WIDTH-']
     for door in wall.listOfDoors:
         door.parentID = wall_id
         door_info = get_feature_info(door, door_info, wall_info)
@@ -1070,14 +1141,14 @@ def draw_wall_and_attachments(graph, folder, feature_images, wall, pixel_ratio, 
 
 def draw_feature(graph, folder, feature_images, feature_info, pixel_ratio):
     feature_size = int(feature_info['-FEATURE LENGTH-'] * pixel_ratio)
+    feature_width = int(feature_info['-FEATURE WIDTH-'] * pixel_ratio)
     x = feature_info['-X POS-'] * pixel_ratio
     y = feature_info['-Y POS-'] * pixel_ratio
     rotate_angle = feature_info['-FEATURE ANGLE-']
-    shape = feature_size, feature_size
+    make_svg_picture(folder, feature_images[feature_info['-FEATURE-']], feature_size, feature_width)
     feature_path = os.path.join(folder, feature_images[feature_info['-FEATURE-']])
-    image_in = image_formating(feature_path, resize=shape)
-    feature = resize_img(image_in, shape)
-    feature = make_black(feature)
+    image_in = image_formating(feature_path)
+    feature = make_black(image_in)
     feature = feature.rotate(rotate_angle, fillcolor=(250, 150, 50), expand=True)
     shift = get_distance_from_center(feature)
 
@@ -1267,7 +1338,7 @@ def main_gui():
     # --------------------------------- Add feature objects ---------------------------
     story = 0
     buildingData = bd.BuildingData()
-    feature_images = {'Door':'door_right.gif', 'Wall':'wall.gif', 'Window':'window.gif'}
+    feature_images = {'Door':'door.png', 'Wall':'wall.png', 'Window':'window.png'}
     available_features = ['Wall', 'Door', 'Window']
     feat_list_wall = ['Concrete', 'Wood', 'Plaster']
     feat_list_door = ['Steel', 'Wood', 'Screen']
@@ -1319,13 +1390,13 @@ def main_gui():
     while True:
         event, values = window.read()
 
+        if event in (sg.WIN_CLOSED, 'Exit'): # Closes the App
+            break
         if bound_top and event != '-FILE LIST-': # delete the bounds if they exist
             # delete bounds
             graph2.delete_figure(bound_top)
             graph2.delete_figure(bound_bottom)
             bound_top = bound_bottom = None
-        if event in (sg.WIN_CLOSED, 'Exit'): # Closes the App
-            break
         if event == 'New       ALT-N': # Creates a new blueprint conversion environment
             save_convert = False
             new_size = int(window_size[1] * image_window_percent)
@@ -1660,10 +1731,11 @@ def main_gui():
                 wall_info = get_building_wall_info(feature_dict[edit_feature.parentID])
                 new_info = edit_blueprint_wall_attachment(edit_feature, x_pixel_ratio, wall_info, schedule_names)
                 if new_info != None:
-                    update_door(edit_feature, new_info)
+                    update_door(edit_feature, new_info, buildingData.buildingSchedule)
                     erase_wall_attachment(graph2, feature_dict, edit_feature)
                     door_info = {}
                     door_info['-FEATURE-'] = 'Door'
+                    door_info['-FEATURE WIDTH-'] = wall_info['-FEATURE WIDTH-']
                     feature_info = get_feature_info(edit_feature, door_info, wall_info)
                     edit_id = draw_feature(graph2, folder, feature_images, feature_info, x_pixel_ratio)
                     feature_dict[edit_id] = edit_feature
@@ -1675,6 +1747,7 @@ def main_gui():
                     erase_wall_attachment(graph2, feature_dict, edit_feature)
                     window_info = {}
                     window_info['-FEATURE-'] = 'Window'
+                    window_info['-FEATURE WIDTH-'] = wall_info['-FEATURE WIDTH-']
                     feature_info = get_feature_info(edit_feature, window_info, wall_info)
                     edit_id = draw_feature(graph2, folder, feature_images, feature_info, x_pixel_ratio)
                     feature_dict[edit_id] = edit_feature
