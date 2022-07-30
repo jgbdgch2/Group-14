@@ -13,12 +13,17 @@ class BuildingData:
 
     isImperial = True
 
+    pixelRatioY = 0.0
+    pixelRatioX = 0.0
+
     def __init__(self):
         self.buildingSchedule = Schedule()
         self.listOfStories = []
         self.listOfGridlines = []
         self.listOfElevations = []
         self.isImperial = True
+        self.pixelRatioY = 0.0
+        self.pixelRatioX = 0.0
 
     #TODO delete, search functions
 
@@ -532,6 +537,8 @@ def readJSON(filename):
     jsonDict = json.load(read)
     # Set is isImperial
     bd.isImperial = jsonDict['isImperial']
+    bd.pixelRatioY = jsonDict['pixelRatioY']
+    bd.pixelRatioX = jsonDict['pixelRatioX']
 
     # Add elevations and gridlines
     for key in jsonDict['listOfGridlines']:
