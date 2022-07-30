@@ -1586,6 +1586,7 @@ def main_gui():
                         top_left = int(left*h), int(top*v)
                         bottom_right = int(right*h), int(bottom*v)
                         bounding_box = top_left, bottom_right
+                        orig_img.save('./blueprint_features/save.png')
                         try:
                             send_img = cv2.imread("./blueprint_features/save.png")
                         except Exception as E:
