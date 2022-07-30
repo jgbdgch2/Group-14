@@ -353,7 +353,7 @@ def find_wall(full_image, bounding_box, pixelToInches):
     center = calculate_center(new_max_line, new_smaller_line)
     #center = (center[0], len(full_image) - center[1])
     #center = (center[1]+minx, len(full_image)-(center[0]+miny))
-    center = (minx, miny)
+    center = (minx+center[0], len(full_image)-miny-center[1]/2)
     
     windows = findWindows(image, lines, max_line, smaller_line, center, pixelToInches)
     #doors = findDoors()
