@@ -10,11 +10,8 @@ def measure_line(points):
     x1, y1, x2, y2 = points
     return ((x1-x2)**2 + (y1-y2)**2)**(1/2)
 
-# returns longer line
 def compare_lines(points1, points2):
-    if measure_line(points1) > measure_line(points2):
-        return points1
-    return points2
+    return measure_line(points1)-measure_line(points2)
 
 #finds angle of given line
 #0 is horizontal, with values ranging (90, -90]
@@ -97,13 +94,18 @@ def point_segment_distance(px, py, x1, y1, x2, y2):
         dy = py - near_y
 
     return math.hypot(dx, dy)
-
-def calculate_center(max_line, smaller_line, minx, miny):
+    
+def point_segment_distance_helper(p, line):
+    px, py = p
+    x1, y1, x2, y2 = line
+    return point_segment_distance(px, py, x1 ,y1, x2, y2)
+    
+def calculate_center(max_line, smaller_line):
     x11, y11, x12, y12 = max_line
     x21, y21, x22, y22 = smaller_line
 
-    if True:
-        return ((x11+x12+x21+x22)/4,(y11+y12+y21+y22)/4)
+    #if True:
+        #return ((x11+x12+x21+x22)/4,(y11+y12+y21+y22)/4)
 
     #start with the center of the larger line
     center = (x11+x12/2, y11+y12/2)
@@ -114,13 +116,15 @@ def calculate_center(max_line, smaller_line, minx, miny):
     #by the thickness of the wall perpendicular to its angle
     center_option_1 = (center[0] + offset[0], center[1] + offset[1])
     center_option_2 = (center[0] - offset[0], center[1] - offset[1])
+    
+    print("center", center, "center_option_1", center_option_1, "center_option_2", center_option_2)
 
     distance_1 = point_segment_distance(center_option_1[0], center_option_1[1], x21, y21, x22, y22)
     distance_2 = point_segment_distance(center_option_2[0], center_option_2[1], x21, y21, x22, y22)
-
+    
     if distance_1 < distance_2:
-        return (float(center_option_1[0] + minx), float(center_option_1[1] + miny))
-    return (float(center_option_2[0] + minx), float(center_option_2[1] + miny))
+        return (float(center_option_1[0]), float(center_option_1[1]))
+    return (float(center_option_2[0]), float(center_option_2[1]))
 
 def bind_lines(max_line, smaller_line):
     x11, y11, x12, y12 = max_line
@@ -212,7 +216,8 @@ def find_measurement_marker(file_name):
 
     # Find line of maximum length
     for points in lines:
-        max_line = compare_lines(points[0], max_line)
+        if compare_lines(points[0], max_line) < 0:
+            max_line = points[0][0]
 
     # Draw detected elements to image
     for points in lines:
@@ -238,6 +243,14 @@ def find_measurement_marker(file_name):
 
     return max_line
 
+def project_point(point, line):
+    x3, y3 = point
+    x1, y1, x2, y2 = line
+    dx, dy = x2-x1, y2-y1
+    det = dx*dx + dy*dy
+    a = (dy*(y3-y1)+dx*(x3-x1))/det
+    return (x1+a*dx, y1+a*dy)
+
 def find_wall(full_image, bounding_box, pixelToInches):
 
     cv2.imwrite('full_image.png',full_image)
@@ -250,6 +263,11 @@ def find_wall(full_image, bounding_box, pixelToInches):
     miny = min(boundingy1, boundingy2)
     maxx = max(boundingx1, boundingx2)
     maxy = max(boundingy1, boundingy2)
+    
+    center_of_image = ((minx+maxx)/2, (miny+maxy)/2)
+    center_of_image_line = (int((minx+maxx)/2), int((miny+maxy)/2), int((minx+maxx+4)/2), int((miny+maxy)/2))
+    
+    #print(center_of_image_line)
 
     #don't ask me why its backwards
     image = full_image[miny:maxy, minx:maxx]
@@ -287,26 +305,31 @@ def find_wall(full_image, bounding_box, pixelToInches):
     #returns longest line found
     max_line = (0, 0, 0, 0)
     for points in lines:
-        max_line = compare_lines(points[0], max_line)
-        find_line_angle(points[0])
+        if compare_lines(points[0], max_line) > 0:
+            max_line = points[0]
 
     if np.array_equiv(max_line, (0, 0, 0, 0)):
         return None
+        
+    #print("found max line")
 
     #locates the longest line parallel to max_line
-    smaller_line = (0, 0, 0, 0)
+    smaller_line = center_of_image_line
     for points in lines:
         if np.array_equiv(points[0], max_line):
             continue
         if compare_line_angle(find_line_angle(points[0]), find_line_angle(max_line)) > 2.0:
             continue
-        if segments_distance(points[0], max_line) < 5 * pixelToInches:
+        if segments_distance(points[0], max_line) < 5 * pixelToInches: #magic number
             continue
-        smaller_line = compare_lines(points[0], smaller_line)
+        if compare_lines(points[0], smaller_line) < -20: #magic number
+            continue
+        if point_segment_distance_helper(center_of_image, points[0]) > point_segment_distance_helper(center_of_image, smaller_line):
+            smaller_line = points[0]
+        
 
     if np.array_equiv(smaller_line, (0, 0, 0, 0)):
         return None
-
     #TODO delete this
     #print("distacnce is", segments_distance(max_line, smaller_line))
     #print(find_line_angle((0,0,10,0)))
@@ -314,9 +337,9 @@ def find_wall(full_image, bounding_box, pixelToInches):
     #print(find_line_angle((0,10,1,0)))
     #print(max_line, smaller_line)
     #print("wall detected")
-
-    max_line, smaller_line = bind_lines(max_line, smaller_line)
-
+    
+    new_max_line, new_smaller_line = bind_lines(max_line, smaller_line)
+    
     #TODO DELETE
     cv2.line(image,(max_line[0],max_line[1]),(max_line[2],max_line[3]),(255,0,255),2)
     cv2.line(image,(smaller_line[0],smaller_line[1]),(smaller_line[2],smaller_line[3]),(255,0,255),2)
@@ -324,15 +347,58 @@ def find_wall(full_image, bounding_box, pixelToInches):
     #print(smaller_line)
     #cv2.line(image,(smaller_line[0],smaller_line[1]),(smaller_line[2],smaller_line[3]),(255,0,255),2)
     cv2.imwrite('detectedLines.png',image)
+    
+    print("shape of image", image.shape)
+    print(new_max_line, new_smaller_line, minx, miny)
+    center = calculate_center(new_max_line, new_smaller_line)
+    #center = (center[0], len(full_image) - center[1])
+    #center = (center[1]+minx, len(full_image)-(center[0]+miny))
+    center = (minx+center[0], len(full_image)-miny-center[1]/2)
+    
+    windows = findWindows(image, lines, max_line, smaller_line, center, pixelToInches)
+    #doors = findDoors()
 
-    center = calculate_center(max_line, smaller_line, minx, miny)
-    center = (center[1], len(full_image) - center[0])
+    return center, float(measure_line(max_line)), find_line_angle(max_line), segments_distance(max_line, smaller_line), windows
 
-    return calculate_center(max_line, smaller_line, minx, miny), float(measure_line(max_line)), find_line_angle(max_line), segments_distance(max_line, smaller_line)
+def findWindows(image, lines, max_line, smaller_line, center, pixelToInches):
+    #print("finding windows")
+    potential_window_panes = []
+    for points in lines:
+        if np.array_equiv(points[0], max_line):
+            continue
+        if np.array_equiv(points[0], smaller_line):
+            continue
+        if compare_line_angle(find_line_angle(points[0]), find_line_angle(max_line)) > 2.0:
+            continue
+        if measure_line(points[0]) > measure_line(smaller_line)/2:
+            continue
+        potential_window_panes.append(points[0])
+        
+        x1,y1,x2,y2=points[0]
+        cv2.line(image,(x1,y1),(x2,y2),(0,255,255),2)
+        
+    #TODO trim potential_window_panes
+    windows = []
+        
+    for lines in potential_window_panes:
+        center_of_pane = ((lines[0] + lines[2])/2, (lines[1] + lines[3])/2)
+        project_max_line = project_point(center_of_pane, max_line)
+        project_smaller_line = project_point(center_of_pane, smaller_line)
+        center_of_window = ((project_max_line[0] + project_smaller_line[1])/2, (project_max_line[1] + project_smaller_line[1])/2)
+        window_distance = measure_line((center_of_window[0], center_of_window[0], center[0], center[1]))
+        if center_of_window[0] < center[0] or center_of_window[1] < center[1]:
+            window_distance = -window_distance
+        windows.append(window_distance)
+        
+        
+    cv2.imwrite('detectedLines.png',image)
+    windows = [*set(windows)]
+    return windows
 
 def machine_learning_feature_data_extractor(im, pixelToInches):
     elements = []
-    bounding_boxes = test_frcnn_modified.test(im)
+    bounding_boxes, dictionary = test_frcnn_modified.test(im)
+    return bounding_boxes
     #print(bounding_boxes)
     '''
     for box in bounding_boxes:
@@ -340,10 +406,6 @@ def machine_learning_feature_data_extractor(im, pixelToInches):
             elements.append(feature_data_extractor(im, box.bounding, pixelToInches))
     return elements
     '''
-# remove this after testing
-#"C:\Users\Stepnanie\OneDrive\Documents\GitHub\Group-14\blueprints\originals\Grant_Cropped_Blueprint.png"
-filepath_image = "blueprints\originals\Grant_Cropped_Blueprint.png"
-machine_learning_feature_data_extractor(filepath_image, 40)
 
 def feature_data_extractor(im, bounding_box, pixelToInches, element_type):
     #TODO REMOVE
@@ -354,17 +416,34 @@ def feature_data_extractor(im, bounding_box, pixelToInches, element_type):
         print("\n------------------------------------------------\n")
         results = find_wall(im, bounding_box, pixelToInches)
         if results:
-            center, length, angle, thickness = results
+            center, length, angle, thickness, windows = results
             #TODO REMOVE
-            print((center[0], center[1]), length, thickness)
-            return building_data.Wall((center[0]/pixelToInches, center[1]/pixelToInches), length/pixelToInches, angle), thickness/pixelToInches
+            print((center[0]/pixelToInches, center[1]/pixelToInches), length/pixelToInches, thickness/pixelToInches)
+            print("pixelToInches", pixelToInches)
+            print(pixelToInches)
+            #print(windows)
+            wall = building_data.Wall((float(center[0]/pixelToInches), float(center[1]/pixelToInches)), float(length/pixelToInches), float(angle))
+            #'''
+            for element in windows:
+                print("window distance", element)
+                window_buffer = building_data.Window(float(element/pixelToInches))
+                #wall.append(window_buffer)
+            #'''
+            return (wall, float(thickness/pixelToInches))
     return None
 
 #print(find_a_prime_b_prime((10, 20), (35, 7), (12, 10)))
 #image = cv2.imread("wall-with-door.png")
 #points = ((0,0), (len(image[0]-1),len(image)-1))
 #wall = feature_data_extractor(image, points, 2.4, "Wall")
-
+#print(wall)
+#print("end of file")
+#assert len(wall[0].listOfWindows) > 1
 #print(wall.getPos())
 
 #machine_learning_feature_data_extractor(cv2.imread("full_image.png"), 1.0, )
+
+# remove this after testing
+#"C:\Users\Stepnanie\OneDrive\Documents\GitHub\Group-14\blueprints\originals\Grant_Cropped_Blueprint.png"
+#filepath_image = "blueprints\originals\Grant_Cropped_Blueprint.png"
+#machine_learning_feature_data_extractor(filepath_image, 40)

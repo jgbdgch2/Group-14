@@ -1,3 +1,17 @@
+'''
+You should be using keras==2.0.3
+pip install keras==2.0.3
+
+Also 'h5py<3.0.0'
+conda install -c conda-forge h5py==2.10.0
+
+Tensorflow version 1.15
+conda install -c conda-forge tensorflow-gpu=1.15
+
+needs python 3.6 or 3.7
+'''
+
+
 from __future__ import division
 import os
 import cv2
@@ -14,28 +28,12 @@ from keras_frcnn import roi_helpers
 # from google.colab.patches import cv2_imshow
 import copy
 
-def test(image):
+def test(img, num_rois = 1, config_output_filename = 'config.pickle'):
 	sys.setrecursionlimit(40000)
-
-	parser = OptionParser()
-
-	parser.add_option("-p", "--path", dest="test_path", help="Path to test data.")
-	parser.add_option("-n", "--num_rois", type="int", dest="num_rois",
-					help="Number of ROIs per iteration. Higher means more memory use.", default=32)
-	parser.add_option("--config_filename", dest="config_filename", help=
-					"Location to read the metadata related to the training (generated when training).",
-					default="config.pickle")
-	parser.add_option("--network", dest="network", help="Base network to use. Supports vgg or resnet50.", default='resnet50')
-
-	(options, args) = parser.parse_args()
-
+    
 	# need to be fixed
-	# os.mkdir('./results_imgs')
-	# if not options.test_path:   # if filename is not given
-		# parser.error('Error: path to test data must be specified. Pass --path to command line')
 
-
-	config_output_filename = options.config_filename
+	#os.mkdir('./results_imgs')
 
 	with open(config_output_filename, 'rb') as f_in:
 		C = pickle.load(f_in)
@@ -50,9 +48,6 @@ def test(image):
 	C.use_horizontal_flips = False
 	C.use_vertical_flips = False
 	C.rot_90 = False
-
-	# not sure if this needs to be touched
-	img_path = options.test_path
 
 	def format_img_size(img, C):
 		""" formats the image size based on config """
@@ -108,7 +103,7 @@ def test(image):
 	# do not print stuff
 	print(class_mapping)
 	class_to_color = {class_mapping[v]: np.random.randint(0, 255, 3) for v in class_mapping}
-	C.num_rois = int(options.num_rois)
+	C.num_rois = int(num_rois)
 
 	if C.network == 'resnet50':
 		num_features = 1024
@@ -172,9 +167,9 @@ def test(image):
 	# original code
 	# img = cv2.imread(filepath)
 	# modified code
-	# print(image)
-	img = cv2.imread(image)
-	# print(img.shape)
+	#print(image)
+	#img = cv2.imread(image)
+	#print(img.shape)
 
 	X, ratio = format_img(img, C)
 
