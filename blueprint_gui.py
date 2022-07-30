@@ -15,7 +15,7 @@ import cairo
 
 import building_data as bd
 import ifc_compiler as ifc
-#import measurement_marker_detector as mmd
+import measurement_marker_detector as mmd
 
 #Will added this
 import importlib
@@ -256,7 +256,7 @@ def convert_to_centimeters(str):
         if char.isdigit() or char == '.':
             value.append(char)
         elif str.endswith('MM') or str.endswith('mm'):
-            return (float(''.join(value)) / 1000) * mult
+            return (float(''.join(value)) * 0.1) * mult
         elif str.endswith('CM') or str.endswith('cm'):
             return (float(''.join(value))) * mult
         elif str.endswith('M') or str.endswith('m'):
@@ -1140,6 +1140,7 @@ def draw_wall_and_attachments(graph, folder, feature_images, wall, pixel_ratio, 
             feature_dict[fig_id] = window
 
 def draw_feature(graph, folder, feature_images, feature_info, pixel_ratio):
+    print(pixel_ratio)
     feature_size = int(feature_info['-FEATURE LENGTH-'] * pixel_ratio)
     feature_width = int(feature_info['-FEATURE WIDTH-'] * pixel_ratio)
     x = feature_info['-X POS-'] * pixel_ratio
@@ -1586,9 +1587,9 @@ def main_gui():
                         top_left = int(left*h), int(top*v)
                         bottom_right = int(right*h), int(bottom*v)
                         bounding_box = top_left, bottom_right
-                        orig_img.save('./blueprint_features/save.png')
+                        orig_img.save('./blueprint_features/temp.png')
                         try:
-                            send_img = cv2.imread("./blueprint_features/save.png")
+                            send_img = cv2.imread("./blueprint_features/temp.png")
                         except Exception as E:
                             print('** Error {} **'.format(E))
                         #Will added this
@@ -1637,8 +1638,9 @@ def main_gui():
                                     break
                             if user_distance:
                                 x_pixel_ratio = x_distance / user_distance['-TOOL LENGTH-']
-                                popup_info('x-axis set')
+                                buildingData.pixelRatioX = x_pixel_ratio
                                 print(x_pixel_ratio)
+                                popup_info('x-axis set')
                         else:
                             while not user_distance or user_distance['-TOOL LENGTH-'] == 0:
                                 user_distance = measure_tool_input_window('Input y-axis distance')
@@ -1646,8 +1648,9 @@ def main_gui():
                                     break
                             if user_distance:
                                 y_pixel_ratio = y_distance / user_distance['-TOOL LENGTH-']
-                                popup_info('y-axis set')
+                                buildingData.pixelRatioY = y_pixel_ratio
                                 print(y_pixel_ratio)
+                                popup_info('y-axis set')
                         graph1.delete_figure(a_point)
                         graph1.delete_figure(b_point)
                         if y_pixel_ratio and x_pixel_ratio:
@@ -1765,10 +1768,10 @@ def main_gui():
                 popup_info('Feature Length Required')
                 continue
             if feature_name == 'Wall':
-                if feature_info['-FEATURE ANGLE-'] == '' or not feature_info['-FEATURE ANGLE-'].isdigit():
-                    feature_info['-FEATURE ANGLE-'] = 0.0
-                else:
+                try:
                     feature_info['-FEATURE ANGLE-'] = float(feature_info['-FEATURE ANGLE-'])
+                except:
+                    feature_info['-FEATURE ANGLE-'] = 0.0
             feature_info['-FEATURE-'] = feature_name
             if feature_name in wall_objects:
                 wall = feature_dict[select_fig]
@@ -1861,8 +1864,6 @@ def main_gui():
             mult = image_resolution // new_size
             img = resize_img(orig_img, (new_size, new_size))
             blueprint_2_image = copy.deepcopy(img)
-            x_pixel_ratio = settings['-X RATIO-']
-            y_pixel_ratio = settings['-Y RATIO-']
             img = resize_img(orig_img, (new_size, new_size))
             graph1 = window["-GRAPH1-"]  # type: sg.Graph
             graph1.erase()
@@ -1875,6 +1876,10 @@ def main_gui():
             graph1.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
             crop = False
             buildingData = bd.readJSON("save.json")
+            x_pixel_ratio = buildingData.pixelRatioX
+            y_pixel_ratio = buildingData.pixelRatioY
+            print(x_pixel_ratio)
+            print(y_pixel_ratio)
             if settings['-SAVE CONVERT-']:
                 save_convert = True
                 graph2 = window["-GRAPH2-"]  # type: sg.Graph
@@ -1888,13 +1893,14 @@ def main_gui():
                                      feature_dict, x_pixel_ratio, folder, feature_images)
         elif  event == 'Quick Save':
             settings['-SAVE CONVERT-'] = save_convert
-            settings['-X RATIO-'] = x_pixel_ratio
-            settings['-Y RATIO-'] = y_pixel_ratio
             orig_img.save('./blueprint_features/save.png')
             bd.writeJSON(buildingData, "save.json")
             popup_info('Saved!')
         elif  event == 'Add To Schedule':
-            blueprint_schedule_creator(buildingData.buildingSchedule)
+            add_only = False
+            if graph2 != None:
+                add_only = True
+            blueprint_schedule_creator(buildingData.buildingSchedule, add_only=add_only)
     # --------------------------------- Close & Exit ---------------------------------
     window.close()
 

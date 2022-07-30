@@ -2,166 +2,40 @@
     "buildingSchedule": {
         "listOfDoorTypes": [
             {
-                "height": 84.0,
-                "name": "the Pearly Gates",
-                "typeNumber": 2,
-                "width": 36.0
+                "height": 78.7402,
+                "name": "Mahogany",
+                "typeNumber": 1,
+                "width": 39.3701
             }
         ],
         "listOfWallTypes": [
             {
                 "name": "das conk creet baybee",
-                "thickness": 8.0,
-                "typeNumber": 1
+                "thickness": 19.68505,
+                "typeNumber": 3
             }
         ],
         "listOfWindowTypes": [
             {
-                "height": 24.0,
-                "name": "the Pearly window",
-                "sillHeight": 12.0,
-                "typeNumber": 3,
-                "width": 24.0
+                "height": 39.3701,
+                "name": "Single pane-emergency egress",
+                "sillHeight": 39.3701,
+                "typeNumber": 2,
+                "width": 78.7402
             }
         ]
     },
     "isImperial": true,
     "listOfElevations": [],
-    "listOfGridlines": [
-        {
-            "cood0": [
-                0.0,
-                0.0
-            ],
-            "cood1": [
-                2000.0,
-                0.0
-            ],
-            "name": "placeholder"
-        },
-        {
-            "cood0": [
-                0.0,
-                1000.0
-            ],
-            "cood1": [
-                2000.0,
-                1000.0
-            ],
-            "name": "placeholder"
-        },
-        {
-            "cood0": [
-                0.0,
-                0.0
-            ],
-            "cood1": [
-                0.0,
-                1000.0
-            ],
-            "name": "placeholder"
-        },
-        {
-            "cood0": [
-                2000.0,
-                0.0
-            ],
-            "cood1": [
-                2000.0,
-                1000.0
-            ],
-            "name": "placeholder"
-        }
-    ],
+    "listOfGridlines": [],
     "listOfStories": [
         {
             "bottomElevation": 0.0,
             "listOfWallJoins": [],
-            "listOfWalls": [
-                {
-                    "angle": 145.0,
-                    "length": 395.0,
-                    "listOfDoors": [
-                        {
-                            "doorType": {
-                                "height": 84.0,
-                                "name": "the Pearly Gates",
-                                "typeNumber": 2,
-                                "width": 36.0
-                            },
-                            "hingePos": 1,
-                            "position": 50.0,
-                            "typeNumber": 2
-                        }
-                    ],
-                    "listOfWindows": [
-                        {
-                            "directionFacing": 0,
-                            "position": -100.0,
-                            "sillHeight": Infinity,
-                            "typeNumber": 3,
-                            "windowType": {
-                                "height": 24.0,
-                                "name": "the Pearly window",
-                                "sillHeight": 12.0,
-                                "typeNumber": 3,
-                                "width": 24.0
-                            }
-                        }
-                    ],
-                    "typeNumber": 1,
-                    "wallType": {
-                        "name": "das conk creet baybee",
-                        "thickness": 8.0,
-                        "typeNumber": 1
-                    },
-                    "xPos": 268.46,
-                    "yPos": 397.37
-                },
-                {
-                    "angle": 90.0,
-                    "length": 395.0,
-                    "listOfDoors": [],
-                    "listOfWindows": [],
-                    "typeNumber": 1,
-                    "wallType": {
-                        "name": "das conk creet baybee",
-                        "thickness": 8.0,
-                        "typeNumber": 1
-                    },
-                    "xPos": 92.25,
-                    "yPos": 221.16
-                },
-                {
-                    "angle": 90.0,
-                    "length": 395.0,
-                    "listOfDoors": [],
-                    "listOfWindows": [],
-                    "typeNumber": 1,
-                    "wallType": {
-                        "name": "das conk creet baybee",
-                        "thickness": 8.0,
-                        "typeNumber": 1
-                    },
-                    "xPos": 444.67,
-                    "yPos": 221.16
-                },
-                {
-                    "angle": 0.0,
-                    "length": 395.0,
-                    "listOfDoors": [],
-                    "listOfWindows": [],
-                    "typeNumber": 1,
-                    "wallType": {
-                        "name": "das conk creet baybee",
-                        "thickness": 8.0,
-                        "typeNumber": 1
-                    },
-                    "xPos": 268.46,
-                    "yPos": 44.94
-                }
-            ],
+            "listOfWalls": [],
             "topElevation": 96.0
         }
-    ]
+    ],
+    "pixelRatioX": 2.4129986969807034,
+    "pixelRatioY": 2.4129986969807034
 }
