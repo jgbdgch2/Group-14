@@ -102,7 +102,7 @@ def locationOnWall(distance, Wall, hingeToggle, elementThickness):
     xPos = Wall.xPos / unitModifier
     yPos = Wall.yPos / unitModifier
 
-    x = xPos + distance * math.cos(angle) + thickness * math.sin(angle)
+    x = xPos + distance * math.cos(angle) + thickness * abs(math.sin(angle))
     y = yPos + distance * math.sin(angle) - thickness * math.cos(angle)
 
     return "({:.6f}, {:.6f}, 0.0)".format(x, y)
@@ -111,7 +111,8 @@ def locationOnWall(distance, Wall, hingeToggle, elementThickness):
 def getExtrudeDir(wallAngle):
     x = math.cos(math.radians(wallAngle + 90.0))
     y = math.sin(math.radians(wallAngle + 90.0))
-    return "({:.6f}, {:.6f}, 0.0)".format(x, y)
+    return "(0.0, 1.0, 0.0)".format(x, y)
+    #return "({:.6f}, {:.6f}, 0.0)".format(x, y)
 
 def printPerpendicularShapeDef(f, coords, thickness, extrudeDir):
     global ifcPointer
@@ -252,7 +253,7 @@ def compileDoor(f, Door, Wall, ifcWallPointer, storyLocalPlacement):
     ifcOpeningPointer = ifcPointer
     ifcPointer +=1
 
-    defaultDoorThickness = 0.125 #translates to 1.5 inches
+    defaultDoorThickness = 0.166666666 #translates to 2 inches
     hingeToggle = False # used to make door's 3d model appear on the correct side of the opening
     if(Door.hingePos == 1): # change this if statement once hingepos system is finalized
         hingeToggle = True
