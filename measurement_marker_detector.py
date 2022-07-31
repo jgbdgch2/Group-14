@@ -116,8 +116,6 @@ def calculate_center(max_line, smaller_line):
     #by the thickness of the wall perpendicular to its angle
     center_option_1 = (center[0] + offset[0], center[1] + offset[1])
     center_option_2 = (center[0] - offset[0], center[1] - offset[1])
-    
-    print("center", center, "center_option_1", center_option_1, "center_option_2", center_option_2)
 
     distance_1 = point_segment_distance(center_option_1[0], center_option_1[1], x21, y21, x22, y22)
     distance_2 = point_segment_distance(center_option_2[0], center_option_2[1], x21, y21, x22, y22)
@@ -264,6 +262,8 @@ def find_wall(full_image, bounding_box, pixelToInches):
     maxx = max(boundingx1, boundingx2)
     maxy = max(boundingy1, boundingy2)
     
+    print(minx, miny, maxx, maxy)
+    
     center_of_image = ((minx+maxx)/2, (miny+maxy)/2)
     center_of_image_line = (int((minx+maxx)/2), int((miny+maxy)/2), int((minx+maxx+4)/2), int((miny+maxy)/2))
     
@@ -310,8 +310,6 @@ def find_wall(full_image, bounding_box, pixelToInches):
 
     if np.array_equiv(max_line, (0, 0, 0, 0)):
         return None
-        
-    #print("found max line")
 
     #locates the longest line parallel to max_line
     smaller_line = center_of_image_line
@@ -330,38 +328,26 @@ def find_wall(full_image, bounding_box, pixelToInches):
 
     if np.array_equiv(smaller_line, (0, 0, 0, 0)):
         return None
-    #TODO delete this
-    #print("distacnce is", segments_distance(max_line, smaller_line))
-    #print(find_line_angle((0,0,10,0)))
-    #print(find_line_angle((0,10,0,0)))
-    #print(find_line_angle((0,10,1,0)))
-    #print(max_line, smaller_line)
-    #print("wall detected")
     
     new_max_line, new_smaller_line = bind_lines(max_line, smaller_line)
     
     #TODO DELETE
-    cv2.line(image,(max_line[0],max_line[1]),(max_line[2],max_line[3]),(255,0,255),2)
-    cv2.line(image,(smaller_line[0],smaller_line[1]),(smaller_line[2],smaller_line[3]),(255,0,255),2)
+    cv2.line(image,(new_max_line[0],new_max_line[1]),(new_max_line[2],new_max_line[3]),(255,0,255),2)
+    cv2.line(image,(new_smaller_line[0],new_smaller_line[1]),(new_smaller_line[2],new_smaller_line[3]),(255,0,255),2)
     #for testing
     #print(smaller_line)
     #cv2.line(image,(smaller_line[0],smaller_line[1]),(smaller_line[2],smaller_line[3]),(255,0,255),2)
     cv2.imwrite('detectedLines.png',image)
     
-    print("shape of image", image.shape)
-    print(new_max_line, new_smaller_line, minx, miny)
     center = calculate_center(new_max_line, new_smaller_line)
-    #center = (center[0], len(full_image) - center[1])
-    #center = (center[1]+minx, len(full_image)-(center[0]+miny))
     center = (minx+center[0], len(full_image)-miny-center[1]/2)
     
-    windows = findWindows(image, lines, max_line, smaller_line, center, pixelToInches)
+    windows = findWindows(image, lines, max_line, smaller_line, calculate_center(new_max_line, new_smaller_line), pixelToInches)
     #doors = findDoors()
 
     return center, float(measure_line(max_line)), find_line_angle(max_line), segments_distance(max_line, smaller_line), windows
 
 def findWindows(image, lines, max_line, smaller_line, center, pixelToInches):
-    #print("finding windows")
     potential_window_panes = []
     for points in lines:
         if np.array_equiv(points[0], max_line):
@@ -385,10 +371,15 @@ def findWindows(image, lines, max_line, smaller_line, center, pixelToInches):
         project_max_line = project_point(center_of_pane, max_line)
         project_smaller_line = project_point(center_of_pane, smaller_line)
         center_of_window = ((project_max_line[0] + project_smaller_line[1])/2, (project_max_line[1] + project_smaller_line[1])/2)
-        window_distance = measure_line((center_of_window[0], center_of_window[0], center[0], center[1]))
-        if center_of_window[0] < center[0] or center_of_window[1] < center[1]:
+        
+        #TODO REMOVE
+        center_of_window = center_of_pane
+        
+        window_distance = measure_line((center_of_window[0], center_of_window[1], center[0], center[1]))
+        print("center of window", center_of_window, "center of wall", center, "diff", (center_of_window[0]-center[0])/6.35, (center_of_window[1]-center[1])/6.35)
+        if center_of_window[0] < center[0]:
             window_distance = -window_distance
-        windows.append(window_distance)
+        windows.append((window_distance, measure_line(lines)))
         
         
     cv2.imwrite('detectedLines.png',image)
@@ -407,27 +398,35 @@ def machine_learning_feature_data_extractor(im, pixelToInches):
     return elements
     '''
 
-def feature_data_extractor(im, bounding_box, pixelToInches, element_type):
-    #TODO REMOVE
-    #print("bounding box is", bounding_box, "image size is", len(im[0]), len(im), "reload worked")
-    #print("pixeltoinches =", pixelToInches)
-    #pixelToInches = 2
+def feature_data_extractor(im, bounding_box, pixelToInches, buildingSchedule, element_type):
+    #require atleast 1 wall type
+    if len(buildingSchedule.listOfWallTypes) < 0:
+        return None
     if element_type == "Wall":
         print("\n------------------------------------------------\n")
         results = find_wall(im, bounding_box, pixelToInches)
         if results:
             center, length, angle, thickness, windows = results
+            wall = building_data.Wall((float(center[0]/pixelToInches), float(center[1]/pixelToInches)), float(length/pixelToInches), float(angle))
+            
             #TODO REMOVE
             print((center[0]/pixelToInches, center[1]/pixelToInches), length/pixelToInches, thickness/pixelToInches)
             print("pixelToInches", pixelToInches)
-            print(pixelToInches)
-            #print(windows)
-            wall = building_data.Wall((float(center[0]/pixelToInches), float(center[1]/pixelToInches)), float(length/pixelToInches), float(angle))
+            print("windows", windows)
+            
             #'''
-            for element in windows:
-                print("window distance", element)
-                window_buffer = building_data.Window(float(element/pixelToInches))
-                #wall.append(window_buffer)
+            #return windows if there is atleast 1 window type
+            if len(buildingSchedule.listOfWindowTypes) > 0:
+                for element in windows:
+                    print("window distance", element[0]/pixelToInches, "length", element[1]/pixelToInches)
+                    wtype = None
+                    for entry in buildingSchedule.listOfWindowTypes:
+                        if wtype == None:
+                            wtype = entry
+                        if abs(entry.width-(element[1]/pixelToInches)) < abs(wtype.width-(element[1]/pixelToInches)):
+                            wtype = entry
+                    window_buffer = building_data.Window(float(element[0]/pixelToInches), windowType=wtype)
+                    wall.append(window_buffer)
             #'''
             return (wall, float(thickness/pixelToInches))
     return None

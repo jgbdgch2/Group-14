@@ -1643,9 +1643,11 @@ def main_gui():
                         try:
                             result = mmd.feature_data_extractor(send_img,
                                                                      bounding_box,
-                                                                     x_pixel_ratio * h,
+                                                                     x_pixel_ratio * h, 
+                                                                     buildingData.buildingSchedule,
                                                                      'Wall')
-                        except:
+                        except Exception as e: 
+                            print(e)
                             result = None
 
                         '''data = bd.testCode()
