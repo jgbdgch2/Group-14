@@ -1657,6 +1657,9 @@ def main_gui():
                         graph1.delete_figure(a_point)
                         graph1.delete_figure(b_point)
                         if y_pixel_ratio and x_pixel_ratio:
+                            if y_pixel_ratio > 100 or x_pixel_ratio > 100 or \
+                               y_pixel_ratio < 0.2 or x_pixel_ratio < 0.2:
+                               popup_info('Possible pixel ratio error')
                             window.Element('-Convert-').Update(visible=True)
                         a_set = a_point = b_point = user_distance = None
                         set_distance = False
@@ -1852,6 +1855,9 @@ def main_gui():
                 y_pixel_ratio = x_pixel_ratio = None
 
         elif  event == '-EXPORT IFC-':
+            if len(buildingData.listOfStories[0].listOfWalls) = 0:
+                popup_info('Nothing to export...')
+                continue
             save_file = get_file_name()
             window.perform_long_operation(lambda :
                               ifc.compile(buildingData, save_file),
