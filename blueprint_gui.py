@@ -22,6 +22,28 @@ import importlib
 
 wall_objects = ('Door', 'Window') # This doesn't change and is used throughout the GUI
 
+def load_funct(path):
+    # Load the zip file
+    with zipfile.ZipFile(path, 'r') as zipF:
+        # Extract all the contents of zip file
+        zipF.extractall('./blueprint_features')
+    orig_img = PIL.Image.open(r"./blueprint_features/save.png")
+    buildingData = bd.readJSON("./blueprint_features/save235.json")
+    os.remove('./blueprint_features/save235.json')
+    return orig_img, buildingData
+
+def save_funct(orig_img, buildingData, path):
+    orig_img.save('save.png')
+    bd.writeJSON(buildingData, "save235.json")
+    list_files = ['save.png', 'save235.json']
+    # Save the zip file
+    with zipfile.ZipFile(path, 'w') as zipF:
+        for file in list_files:
+            zipF.write(file, compress_type=zipfile.ZIP_DEFLATED)
+
+    os.remove('save.png')
+    os.remove('save235.json')
+
 def create_feature(info_dict, buildingData, story_id, x, y, pixel_ratio, type_name):
     type = info_dict['-FEATURE-']
     if type == 'Wall':
@@ -147,23 +169,24 @@ def get_user_digit(message):
         popup_info('Page Number Required!')
         return None
 
-def get_folder_name(name):
+def get_dir_name(name, pos=-1):
     if '\\' in name:
         folder = name.split('\\')
     else:
         folder = name.split('/')
-    return folder[-1]
+    return folder[pos]
 
-def get_file_name(test_name=''):
-    folder = os.getcwd()
+def get_file_name(file_name='', file_extension='', heading='', folder=''):
+    if folder == '':
+        folder = os.getcwd()
     layout = [[sg.Text('Folder:', size =(6, 1)),
-               sg.Text(get_folder_name(folder), size =(60, 1), key='-NAME-')],
-              [sg.Text('File Name:', size =(10, 1)), sg.Input(test_name, key='-FILE NAME-'),
-               sg.Text('.ifc', size =(4, 1)), sg.FolderBrowse(target='-FOLDER NAME-')],
+               sg.Text(get_dir_name(folder), size =(60, 1), key='-NAME-')],
+              [sg.Text('File Name:', size =(10, 1)), sg.Input(file_name, key='-FILE NAME-'),
+               sg.Text(file_extension, size =(4, 1)), sg.FolderBrowse(target='-FOLDER NAME-')],
               [sg.Input(key='-FOLDER NAME-', enable_events=True, visible=False)], # This allows for events on folder browse!!
               [sg.Submit(bind_return_key=True), sg.Cancel()]]
 
-    window = sg.Window('Export IFC File', layout).finalize()
+    window = sg.Window(heading, layout).finalize()
 
     while True:
         event, values = window.read()
@@ -174,7 +197,7 @@ def get_file_name(test_name=''):
             break
         elif event == '-FOLDER NAME-':
             folder = values['-FOLDER NAME-']
-            window['-NAME-'].update(get_folder_name(values['-FOLDER NAME-']))
+            window['-NAME-'].update(get_dir_name(values['-FOLDER NAME-']))
             window.refresh()
 
     window.close()
@@ -182,8 +205,8 @@ def get_file_name(test_name=''):
     file = values['-FILE NAME-']
     if event in (sg.WIN_CLOSED, 'Exit', 'Cancel') or file == None or file == '':
         return None
-    elif not file.endswith('.ifc'):
-        values['-FILE NAME-'] = file + '.ifc'
+    elif not file.endswith(file_extension):
+        values['-FILE NAME-'] = file + file_extension
     return os.path.join(folder, values['-FILE NAME-'])
 
 def popup_info(info):
@@ -1290,7 +1313,7 @@ def attachment_translate_along_wall(graph, feature_dict, delta_x, delta_y, fig_i
         #-----------------------
         if x_positive and (angle < 270 and angle > 90):
             final_distance *= -1
-        elif not x_positive and (angle < 90 and angle > 270):
+        elif not x_positive and ((angle < 90 and angle > -90) or angle > 270):
             final_distance *= -1
         elif not y_positive and angle == 90:
             final_distance *= -1
@@ -1304,7 +1327,7 @@ def main_gui():
     graph1_menu_def = ['&Right', ['Rotate', 'Set Distance']]
     graph2_menu_def = ['&Right', ['Edit', '!Duplicate', 'Insert', 'Delete', 'Toggle']]
     # First is the top menu
-    menu_def = [['&File', ['&New       ALT-N', '&Quick Save', '&Load Recent', 'E&xit']],
+    menu_def = [['&File', ['&New       ALT-N', '&Save', 'Save as', '&Load', 'Load with', 'E&xit']],
                 ['&Edit', ['Extract Feature', '!Add Story', 'Add To Schedule']],
                 ['Se&ttings', ['&Window Settings', '!Help']]]
 
@@ -1402,7 +1425,7 @@ def main_gui():
     orig_img = a_set = bound_top = bound_bottom = fig = a_point = y_pixel_ratio = None
     x_pixel_ratio = feature_path = user_distance = prior_rect = start_point1 = None
     end_point1 = graph2 = start_point2 = data = new_size = None
-    blueprint_2_ID = None
+    blueprint_2_ID = save_path = None
     feature_dict = {}
     # --------------------------------- Event Loop ---------------------------------
     while True:
@@ -1443,17 +1466,18 @@ def main_gui():
                     end_point1 = blueprint_2_ID = None
                     feature_dict = {}
         elif event == '-LOADED PDF-':
+            orig_img = values[event]
             if load_cancel:
                 load_cancel = False
+                continue
+            if not orig_img:
+                popup_info('Page Not Found!')
                 continue
             if graph2:
                 graph2.erase()
                 graph2 = None
                 window.Element('-GRAPH2-').Update(visible=False)
-            orig_img = values[event]
-            if not orig_img:
-                popup_info('Page Not Found!')
-                continue
+            save_path = None
             img = resize_img(orig_img, (new_size, new_size))
             graph1 = window["-GRAPH1-"]  # type: sg.Graph
             graph1.erase()
@@ -1700,7 +1724,7 @@ def main_gui():
                         select_fig = None
                 if blueprint_2_ID and select_fig == blueprint_2_ID: # check if initial blueprint
                     select_fig = None
-                if select_fig:
+                if select_fig != None:
                     # Draw the bounds around the image
                     bounds = graph2.get_bounding_box(select_fig)
                     bound_top = graph2.DrawCircle(bounds[0], 7, line_color='black', fill_color='white')
@@ -1878,7 +1902,7 @@ def main_gui():
             if len(buildingData.listOfStories[0].listOfWalls) == 0:
                 popup_info('Nothing to export...')
                 continue
-            save_file = get_file_name()
+            save_file = get_file_name(file_extension='.ifc', heading='Export IFC File')
             window.perform_long_operation(lambda :
                               ifc.compile(buildingData, save_file),
                               '-EXPORT-')
@@ -1888,42 +1912,60 @@ def main_gui():
                 popup_info('Successfully Exported!')
                 continue
             popup_info('Export Failed!')
-        elif  event == 'Load Recent':
-            orig_img = PIL.Image.open(r"./blueprint_features/save.png")
-            new_size = int(window_size[1] * image_window_percent)
-            mult = image_resolution // new_size
-            img = resize_img(orig_img, (new_size, new_size))
-            blueprint_2_image = copy.deepcopy(img)
-            img = resize_img(orig_img, (new_size, new_size))
-            graph1 = window["-GRAPH1-"]  # type: sg.Graph
-            graph1.erase()
-            graph1.set_size(window_size)
-            graph1.change_coordinates((0,0), window_size)
-            graph1.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
-            window['-TOUT-'].update(visible=False)
-            window.Element('-GRAPH1-').Update(visible=True)
-            window.Element('-Convert-').Update(visible=True)
-            graph1.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
-            crop = False
-            buildingData = bd.readJSON("save.json")
-            x_pixel_ratio = buildingData.pixelRatioX
-            y_pixel_ratio = buildingData.pixelRatioY
-            if len(buildingData.listOfStories[0].listOfWalls) > 0:
-                graph2 = window["-GRAPH2-"]  # type: sg.Graph
-                graph2.set_size(window_size)
-                graph2.change_coordinates((0,0), window_size)
-                blueprint_2_ID = graph2.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
-                switch_to_other_graph(window, '-GRAPH1-', graph1, '-GRAPH2-', graph2, window_size)
-                window.Element('-Convert-').Update(visible=False)
-                window.Element('-EXPORT IFC-').Update(visible=True)
-                graph_draw_from_data(buildingData.listOfStories[story], graph2,
-                                     feature_dict, x_pixel_ratio, folder, feature_images)
-        elif  event == 'Quick Save':
+        elif  event in ('Load with', 'Load'):
+            if save_path == None or event == 'Load with':
+                save_path = sg.popup_get_file('.bd file to open')
+            if save_path == None or save_path == '':
+                continue
+            orig_img, buildingData = load_funct(save_path)
+            try:
+                new_size = int(window_size[1] * image_window_percent)
+                mult = image_resolution // new_size
+                img = resize_img(orig_img, (new_size, new_size))
+                blueprint_2_image = copy.deepcopy(img)
+                img = resize_img(orig_img, (new_size, new_size))
+                graph1 = window["-GRAPH1-"]  # type: sg.Graph
+                graph1.erase()
+                graph1.set_size(window_size)
+                graph1.change_coordinates((0,0), window_size)
+                graph1.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
+                window['-TOUT-'].update(visible=False)
+                window.Element('-GRAPH1-').Update(visible=True)
+                window.Element('-Convert-').Update(visible=True)
+                graph1.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
+                crop = False
+                x_pixel_ratio = buildingData.pixelRatioX
+                y_pixel_ratio = buildingData.pixelRatioY
+                if len(buildingData.listOfStories[0].listOfWalls) > 0:
+                    graph2 = window["-GRAPH2-"]  # type: sg.Graph
+                    graph2.set_size(window_size)
+                    graph2.change_coordinates((0,0), window_size)
+                    blueprint_2_ID = graph2.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
+                    switch_to_other_graph(window, '-GRAPH1-', graph1, '-GRAPH2-', graph2, window_size)
+                    window.Element('-Convert-').Update(visible=False)
+                    window.Element('-EXPORT IFC-').Update(visible=True)
+                    graph_draw_from_data(buildingData.listOfStories[story], graph2,
+                                         feature_dict, x_pixel_ratio, folder, feature_images)
+            except:
+                popup_info('File not found!')
+        elif  event in ('Save', 'Save as'):
+            file_name = ''
+            path = os.getcwd()
+            folder = os.path.join(path, 'Saves')
+            if event == 'Save as' or save_path == None:
+                if save_path != None:
+                    file_name = get_dir_name(save_path, pos=-1)
+                    folder = get_dir_name(save_path, pos=-2)
+                save_path = get_file_name(file_name=file_name,
+                                          file_extension='.bd',
+                                          heading='Save .bd File',
+                                          folder=folder)
+            if save_path == None or save_path == '':
+                continue
             if orig_img == None:
                 popup_info('Nothing to save...')
                 continue
-            orig_img.save('./blueprint_features/save.png')
-            bd.writeJSON(buildingData, "save.json")
+            save_funct(orig_img, buildingData, save_path)
             popup_info('Saved!')
         elif  event == 'Add To Schedule':
             add_only = False
