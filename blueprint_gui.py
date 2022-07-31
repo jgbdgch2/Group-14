@@ -327,7 +327,7 @@ def convert_to_meters_string(value):
     if value < 0:
         value *= -1
         negative = True
-    centimeters = value * 25.4
+    centimeters = value * 25.39989999
     if centimeters >= 1000:
         meters = centimeters / 1000
         front = int(meters)
@@ -1855,7 +1855,7 @@ def main_gui():
                 y_pixel_ratio = x_pixel_ratio = None
 
         elif  event == '-EXPORT IFC-':
-            if len(buildingData.listOfStories[0].listOfWalls) = 0:
+            if len(buildingData.listOfStories[0].listOfWalls) == 0:
                 popup_info('Nothing to export...')
                 continue
             save_file = get_file_name()
