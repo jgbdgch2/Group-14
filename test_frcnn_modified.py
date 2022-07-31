@@ -30,7 +30,7 @@ import copy
 
 def test(img, num_rois = 1, config_output_filename = 'config.pickle'):
 	sys.setrecursionlimit(40000)
-    
+
 	# need to be fixed
 
 	#os.mkdir('./results_imgs')
@@ -101,7 +101,7 @@ def test(img, num_rois = 1, config_output_filename = 'config.pickle'):
 	class_mapping = {v: k for k, v in class_mapping.items()}
 
 	# do not print stuff
-	print(class_mapping)
+	# print(class_mapping)
 	class_to_color = {class_mapping[v]: np.random.randint(0, 255, 3) for v in class_mapping}
 	C.num_rois = int(num_rois)
 
@@ -233,11 +233,11 @@ def test(img, num_rois = 1, config_output_filename = 'config.pickle'):
 			probs[cls_name].append(np.max(P_cls[0, ii, :]))
 
 	# this is for debugging
-	print("Printing all the bboxes")
-	print(bboxes)
-	print("Printing length of bboxes")
-	print(len(bboxes))
-	print(bboxes.keys())
+	# print("Printing all the bboxes")
+	# print(bboxes)
+	# print("Printing length of bboxes")
+	# print(len(bboxes))
+	# print(bboxes.keys())
 
 	all_dets = []
 
@@ -315,4 +315,4 @@ def test(img, num_rois = 1, config_output_filename = 'config.pickle'):
 			# textLabel = '{}: {}'.format(key,int(100*new_probs[jk]))
 			all_dets.append((key,real_coor_boxes[jk]))
 
-	return all_dets
+	return all_dets, class_mapping
