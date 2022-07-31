@@ -1140,7 +1140,6 @@ def draw_wall_and_attachments(graph, folder, feature_images, wall, pixel_ratio, 
             feature_dict[fig_id] = window
 
 def draw_feature(graph, folder, feature_images, feature_info, pixel_ratio):
-    print(pixel_ratio)
     feature_size = int(feature_info['-FEATURE LENGTH-'] * pixel_ratio)
     feature_width = int(feature_info['-FEATURE WIDTH-'] * pixel_ratio)
     x = feature_info['-X POS-'] * pixel_ratio
@@ -1384,7 +1383,7 @@ def main_gui():
     start_point = end_point = filename = feature_name = select_fig = img = None
     orig_img = a_set = bound_top = bound_bottom = fig = a_point = y_pixel_ratio = None
     x_pixel_ratio = feature_path = user_distance = prior_rect = start_point1 = None
-    end_point1 = graph2 = start_point2 = data = new_size = save_convert = None
+    end_point1 = graph2 = start_point2 = data = new_size = None
     blueprint_2_ID = None
     feature_dict = {}
     # --------------------------------- Event Loop ---------------------------------
@@ -1399,7 +1398,6 @@ def main_gui():
             graph2.delete_figure(bound_bottom)
             bound_top = bound_bottom = None
         if event == 'New       ALT-N': # Creates a new blueprint conversion environment
-            save_convert = False
             new_size = int(window_size[1] * image_window_percent)
             mult = image_resolution // new_size
             pdf_file = get_pdf_name()
@@ -1438,7 +1436,6 @@ def main_gui():
             if not orig_img:
                 popup_info('Page Not Found!')
                 continue
-            blueprint_schedule_creator(buildingData.buildingSchedule, add_only=False)
             img = resize_img(orig_img, (new_size, new_size))
             graph1 = window["-GRAPH1-"]  # type: sg.Graph
             graph1.erase()
@@ -1447,6 +1444,7 @@ def main_gui():
             graph1.draw_image(data=convert_to_bytes(img), location=(0, img.size[1]))
             window['-TOUT-'].update(visible=False)
             window.Element('-GRAPH1-').Update(visible=True)
+            blueprint_schedule_creator(buildingData.buildingSchedule, add_only=False)
             popup_info('Select the area of interest.')
             crop = True
         elif event == '-FILE LIST-':    # A file was chosen from the listbox
@@ -1456,6 +1454,12 @@ def main_gui():
             except Exception as E:
                 print('** Error {} **'.format(E)) # something weird happened making the full filename
         elif event == '-Convert-' and img is not None:    # There is a file to be converted
+            schedule_names = get_all_schedule_names(buildingData.buildingSchedule)
+            if len(schedule_names['-DOOR NAMES-']) == 0 or \
+               len(schedule_names['-WINDOW NAMES-']) == 0 or \
+               len(schedule_names['-WALL NAMES-']) == 0:
+                popup_info('Schedule must be complete before continuing')
+                continue
             window.perform_long_operation(lambda :
                               machine_learning_features(img, buildingData, x_pixel_ratio),
                               '-LOADED EXTRACTION-')
@@ -1468,7 +1472,6 @@ def main_gui():
             window.Element('-Convert-').Update(visible=False)
             window.Element('-EXPORT IFC-').Update(visible=True)
         elif event == "-LOADED EXTRACTION-":
-            save_convert = True
             popup_info('Blueprint feature extraction complete!')
             graph_draw_from_data(buildingData.listOfStories[story], window['-GRAPH2-'],
                                  feature_dict, x_pixel_ratio, folder, feature_images)
@@ -1639,7 +1642,7 @@ def main_gui():
                             if user_distance:
                                 x_pixel_ratio = x_distance / user_distance['-TOOL LENGTH-']
                                 buildingData.pixelRatioX = x_pixel_ratio
-                                print(x_pixel_ratio)
+                                print('x init {}'.format(x_pixel_ratio))
                                 popup_info('x-axis set')
                         else:
                             while not user_distance or user_distance['-TOOL LENGTH-'] == 0:
@@ -1649,7 +1652,7 @@ def main_gui():
                             if user_distance:
                                 y_pixel_ratio = y_distance / user_distance['-TOOL LENGTH-']
                                 buildingData.pixelRatioY = y_pixel_ratio
-                                print(y_pixel_ratio)
+                                print('y init {}'.format(y_pixel_ratio))
                                 popup_info('y-axis set')
                         graph1.delete_figure(a_point)
                         graph1.delete_figure(b_point)
@@ -1778,6 +1781,7 @@ def main_gui():
                 wall_info = get_building_wall_info(wall)
                 wall_info['-FEATURE-'] = 'Wall'
                 feature_info['-Wall-'] = wall
+                feature_info['-FEATURE WIDTH-'] = wall_info['-FEATURE WIDTH-']
             if event == "-Feature-":
                 x, y = window_width / 2, window_height / 2
             feature_object = create_feature(feature_info, buildingData, story, x, y,
@@ -1878,10 +1882,7 @@ def main_gui():
             buildingData = bd.readJSON("save.json")
             x_pixel_ratio = buildingData.pixelRatioX
             y_pixel_ratio = buildingData.pixelRatioY
-            print(x_pixel_ratio)
-            print(y_pixel_ratio)
-            if settings['-SAVE CONVERT-']:
-                save_convert = True
+            if len(buildingData.listOfStories[0].listOfWalls) > 0:
                 graph2 = window["-GRAPH2-"]  # type: sg.Graph
                 graph2.set_size(window_size)
                 graph2.change_coordinates((0,0), window_size)
@@ -1892,7 +1893,9 @@ def main_gui():
                 graph_draw_from_data(buildingData.listOfStories[story], graph2,
                                      feature_dict, x_pixel_ratio, folder, feature_images)
         elif  event == 'Quick Save':
-            settings['-SAVE CONVERT-'] = save_convert
+            if orig_img == None:
+                popup_info('Nothing to save...')
+                continue
             orig_img.save('./blueprint_features/save.png')
             bd.writeJSON(buildingData, "save.json")
             popup_info('Saved!')
