@@ -327,11 +327,17 @@ def convert_to_meters_string(value):
     if value < 0:
         value *= -1
         negative = True
-    centimeters = value * 25.39989999
+    centimeters = value * 25.399986284
     if centimeters >= 1000:
         meters = centimeters / 1000
         front = int(meters)
         back = meters - front
+        test = back * 1000000
+        test = test - int(test)
+        # This is used for rounding
+        if test >= 0.5:
+            back += 0.000001
+            front += int(back)
         back = str(float(back))
         back = back[1:]
         if len(back) > 7:
@@ -341,6 +347,12 @@ def convert_to_meters_string(value):
         meters = centimeters * 100
         front = int(meters)
         back = meters - front
+        test = back * 1000000
+        test = test - int(test)
+        # This is used for rounding
+        if test >= 0.5:
+            back += 0.000001
+            front += int(back)
         back = str(float(back))
         back = back[1:]
         if len(back) > 7:
@@ -350,6 +362,12 @@ def convert_to_meters_string(value):
         meters = centimeters/10
         front = int(meters)
         back = meters - front
+        test = back * 1000000
+        test = test - int(test)
+        # This is used for rounding
+        if test >= 0.5:
+            back += 0.000001
+            front += int(back)
         back = str(float(back))
         back = back[1:]
         if len(back) > 7:
