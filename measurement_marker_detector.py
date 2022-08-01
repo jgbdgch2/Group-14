@@ -423,7 +423,9 @@ def findWindows(image, lines, max_line, smaller_line, center, pixelToInches):
 def machine_learning_feature_data_extractor(im, pixelToInches, buildingSchedule):
     elements = []
     #create story to return
+    buildingData = building_data.buildingData()
     story = building_data.Story()
+    buildingData.appendStory(story)
     all_dets = test_frcnn_modified.test(im)
     print("entering the fun zone")
     for det in all_dets:
