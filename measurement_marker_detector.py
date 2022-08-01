@@ -423,11 +423,10 @@ def findWindows(image, lines, max_line, smaller_line, center, pixelToInches):
 def machine_learning_feature_data_extractor(im, pixelToInches, buildingSchedule):
     elements = []
     #create story to return
-    buildingData = building_data.buildingData()
+    buildingData = building_data.BuildingData()
     story = building_data.Story()
-    buildingData.appendStory(story)
+    
     all_dets = test_frcnn_modified.test(im)
-    print("entering the fun zone")
     for det in all_dets:
         label, box = det
         x1, y1, x2, y2 = box
@@ -449,8 +448,8 @@ def machine_learning_feature_data_extractor(im, pixelToInches, buildingSchedule)
         #attach to story
         story.append(wall_buffer[0])
 
-
-    return story
+    buildingData.listOfStories.append((story))
+    return buildingData
 
 def feature_data_extractor(im, bounding_box, pixelToInches, buildingSchedule, element_type):
     #require atleast 1 wall type
