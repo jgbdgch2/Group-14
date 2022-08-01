@@ -105,12 +105,12 @@ def point_segment_distance(px, py, x1, y1, x2, y2):
         dy = py - near_y
 
     return math.hypot(dx, dy)
-    
+
 def point_segment_distance_helper(p, line):
     px, py = p
     x1, y1, x2, y2 = line
     return point_segment_distance(px, py, x1 ,y1, x2, y2)
-    
+
 def calculate_center(max_line, smaller_line):
     x11, y11, x12, y12 = max_line
     x21, y21, x22, y22 = smaller_line
@@ -130,7 +130,7 @@ def bind_lines(max_line, smaller_line):
         temp = y11new
         y11new = y12new
         y12new = temp
-        
+
     if measure_line((x21, y21, x21new, y21new)) > measure_line((x21, y21, x22new, y22new)):
         temp = x21new
         x21new = x22new
@@ -138,7 +138,7 @@ def bind_lines(max_line, smaller_line):
         temp = y21new
         y21new = y22new
         y22new = temp
-    
+
     if measure_line((x11, y11, (x11+x12)/2, (y11+y12)/2)) < measure_line((x11new, y11new, (x11+x12)/2, (y11+y12)/2)):
         x11new = x11
         y11new = y11
@@ -154,7 +154,7 @@ def bind_lines(max_line, smaller_line):
     if measure_line((x22, y22, (x11+x12)/2, (y11+y12)/2)) < measure_line((x22new, y22new, (x11+x12)/2, (y11+y12)/2)):
         x22new = x22
         y22new = y22
-        
+
     max_line_new = (x11new, y11new, x12new, y12new)
     smaller_line_new = (x21new, y21new, x22new, y22new)
 
@@ -182,7 +182,7 @@ def find_a_prime_b_prime(point1, point2, point3):
     yprimea = int(((A**2)*ya - B*((A * xa) + Cprime)) / (A**2 + B**2))
     xprimeb = int(((B**2)*xb - A*((B * yb) + Cprime)) / (A**2 + B**2))
     yprimeb = int(((A**2)*yb - B*((A * xb) + Cprime)) / (A**2 + B**2))
-    
+
     return xprimea, yprimea, xprimeb, yprimeb
 
 def pol2cart(rho, phi):
@@ -265,31 +265,31 @@ def find_lines(edges, pixelToInches):
                 )
     if lines is None:
         return None
-        
+
     return concatinate_lines(lines)
-    
+
 def concatinate_lines(lines):
     shape = lines.shape
     lines = lines.reshape(shape[0], 4)
     graph = []
-    
+
     for line in lines:
         derp = [x for x in lines if compare_line_angle(find_line_angle(line), find_line_angle(x)) < 2 and compare_line_segments(line, x) < 1 and x is not line]
         ferp = np.argwhere(np.isin(lines, derp).all(axis=1))
         ferp = ferp.reshape(len(ferp))
         graph.append(lines[ferp])
-        
+
     new_lines = []
     for node in graph:
         new_lines.append(concatinate_lines_helper(node))
     return new_lines
-    
+
 def concatinate_lines_helper(node):
     points = []
     for x in node:
         points.append((x[0], x[1]))
         points.append((x[2], x[3]))
-    
+
     point1 = points[0]
     point2 = points[1]
     for herp in points:
@@ -313,17 +313,17 @@ def find_wall(full_image, bounding_box, pixelToInches):
     miny = min(boundingy1, boundingy2)
     maxx = max(boundingx1, boundingx2)
     maxy = max(boundingy1, boundingy2)
-    
+
     center_of_image = ((minx+maxx)/2, (miny+maxy)/2)
     center_of_image_line = (int((minx+maxx)/2), int((miny+maxy)/2), int((minx+maxx+4)/2), int((miny+maxy)/2))
-   
+
 
     #don't ask me why its backwards
     image = full_image[miny:maxy, minx:maxx]
     gray = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
     edges = cv2.Canny(gray,50,150,apertureSize=3)
 
-    #find lines 
+    #find lines
     lines = find_lines(edges, pixelToInches)
 
     try:
@@ -362,21 +362,21 @@ def find_wall(full_image, bounding_box, pixelToInches):
             continue
         if point_segment_distance_helper(center_of_image, points) > point_segment_distance_helper(center_of_image, smaller_line):
             smaller_line = points
-        
+
 
     if np.array_equiv(smaller_line, (0, 0, 0, 0)):
         return None
-    
+
     new_max_line, new_smaller_line = bind_lines(max_line, smaller_line)
-    
+
     #TODO DELETE
     cv2.line(image,(new_max_line[0],new_max_line[1]),(new_max_line[2],new_max_line[3]),(255,0,255),2)
     cv2.line(image,(new_smaller_line[0],new_smaller_line[1]),(new_smaller_line[2],new_smaller_line[3]),(255,0,255),2)
     cv2.imwrite('detectedLines.png',image)
-    
+
     center = calculate_center(new_max_line, new_smaller_line)
     center = (minx+center[0], len(full_image)-miny-center[1])
-    
+
     windows = findWindows(image, lines, max_line, smaller_line, calculate_center(new_max_line, new_smaller_line), pixelToInches)
     #doors = findDoors()
     return center, float(measure_line(new_max_line)), find_line_angle(max_line), segments_distance(new_max_line, new_smaller_line), windows
@@ -397,25 +397,25 @@ def findWindows(image, lines, max_line, smaller_line, center, pixelToInches):
         if compare_line_segments(points, smaller_line) < 5*pixelToInches:
             continue
         potential_window_panes.append(points)
-        
+
         x1,y1,x2,y2=points
         cv2.line(image,(x1,y1),(x2,y2),(0,255,255),2)
-        
+
     #TODO trim potential_window_panes
     windows = []
     center_line = ((max_line[0]+smaller_line[0])/2, (max_line[1]+smaller_line[1])/2, (max_line[2]+smaller_line[2])/2, (max_line[3]+smaller_line[3])/2)
-        
+
     for lines in potential_window_panes:
         center_of_pane = ((lines[0] + lines[2])/2, (lines[1] + lines[3])/2)
         center_of_window = project_point(center_of_pane, center_line)
-        
+
         window_distance = measure_line((center_of_window[0], center_of_window[1], center[0], center[1]))
         if center_of_window[0] < center[0]:
             window_distance = -window_distance
-            
+
         windows.append((window_distance, measure_line(lines)))
-        
-        
+
+
     cv2.imwrite('detectedLines.png',image)
     windows = [*set(windows)]
     return windows
@@ -431,25 +431,25 @@ def machine_learning_feature_data_extractor(im, pixelToInches, buildingSchedule)
     for det in all_dets:
         label, box = det
         x1, y1, x2, y2 = box
-        
+
         #TODO REMOVE
         print(det)
-        cv2.rectangle(image, (x1, y1), (x2, y2), (0, 0, 255), 2)
-        cv2.imwrite('bounding_boxes.png',image)
-        
+        cv2.rectangle(im, (x1, y1), (x2, y2), (0, 0, 255), 2)
+        cv2.imwrite('bounding_boxes.png',im)
+
         #only consider walls
         if "wall" not in label:
             continue
-        
+
         #find wall
         wall_buffer = feature_data_extractor(im, ((x1, y1), (x2, y2)), pixelToInches, buildingSchedule, "Wall")
         if wall_buffer == None:
             continue
-            
+
         #attach to story
         story.append(wall_buffer[0])
-        
-        
+
+
     return story
 
 def feature_data_extractor(im, bounding_box, pixelToInches, buildingSchedule, element_type):
@@ -457,14 +457,14 @@ def feature_data_extractor(im, bounding_box, pixelToInches, buildingSchedule, el
     if len(buildingSchedule.listOfWallTypes) < 0:
         return None
     if element_type == "Wall":
-        
+
         results = find_wall(im, bounding_box, pixelToInches)
         if results:
             center, length, angle, thickness, windows = results
             wall = building_data.Wall((float(center[0]/pixelToInches), float(center[1]/pixelToInches)), float(length/pixelToInches), float(angle))
-            
+
             #TODO REMOVE
-            
+
             #'''
             #return windows if there is atleast 1 window type
             if len(buildingSchedule.listOfWindowTypes) > 0:
