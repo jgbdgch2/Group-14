@@ -1051,7 +1051,7 @@ def blueprint_schedule_creator(building_schedule, add_only=True):
             window['-DELETE SCHEDULE-'].update(visible=False)
 
 def machine_learning_features(img, buildingData, y_pixel_ratio): # Testing code for machine learning extraction
-    data = mmd.machine_learning_feature_data_extractor(img, y_pixel_ratio)
+    data = mmd.machine_learning_feature_data_extractor(img, y_pixel_ratio, buildingData.buildingSchedule)
     if data == None:
         return buildingData
     for wall in data.listOfStories[0].listOfWalls:

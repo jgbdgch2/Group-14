@@ -102,17 +102,17 @@ def locationOnWall(distance, Wall, hingeToggle, elementThickness):
     xPos = Wall.xPos / unitModifier
     yPos = Wall.yPos / unitModifier
 
-    x = xPos + distance * math.cos(angle) + thickness * abs(math.sin(angle))
-    y = yPos + distance * math.sin(angle) - thickness * math.cos(angle)
+    x = xPos + distance * math.cos(angle)
+    y = yPos + distance * math.sin(angle) - thickness
 
     return "({:.6f}, {:.6f}, 0.0)".format(x, y)
 
-
+# This was being used for the IFCDIRECTION in printPerpendicularShapeDef
+# but for some unknown reason putting (0.0,1.0,0.0) as the direciton every time is what actually works
 def getExtrudeDir(wallAngle):
     x = math.cos(math.radians(wallAngle + 90.0))
     y = math.sin(math.radians(wallAngle + 90.0))
-    return "(0.0, 1.0, 0.0)".format(x, y)
-    #return "({:.6f}, {:.6f}, 0.0)".format(x, y)
+    return "({:.6f}, {:.6f}, 0.0)".format(x, y)
 
 def printPerpendicularShapeDef(f, coords, thickness, extrudeDir):
     global ifcPointer
@@ -126,7 +126,7 @@ def printPerpendicularShapeDef(f, coords, thickness, extrudeDir):
     f.write("#" + str(ifcPointer) + "= IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#" + str(ifcPointer-1) + ");\n")
     ifcPointer +=1
     #18= IFCDIRECTION((0.,-1.,0.));
-    f.write("#" + str(ifcPointer) + "= IFCDIRECTION(" + extrudeDir + ");\n")
+    f.write("#" + str(ifcPointer) + "= IFCDIRECTION((0.0, 1.0, 0.0));\n")
     ifcPointer +=1
     #603= IFCAXIS2PLACEMENT3D(#6,#18,#20);
     f.write("#" + str(ifcPointer) + "= IFCAXIS2PLACEMENT3D(#1,#" + str(ifcPointer-1) + ",#3);\n")
