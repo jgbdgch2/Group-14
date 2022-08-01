@@ -425,7 +425,7 @@ def machine_learning_feature_data_extractor(im, pixelToInches, buildingSchedule)
     #create story to return
     story = building_data.Story()
     all_dets = test_frcnn_modified.test(im)
-    
+    print("entering the fun zone")
     for det in all_dets:
         label, box = det
         x1, y1, x2, y2 = box
@@ -479,6 +479,7 @@ def feature_data_extractor(im, bounding_box, pixelToInches, buildingSchedule, el
             return (wall, float(thickness/pixelToInches))
     return None
 
+'''
 buildingSchedule = building_data.Schedule()
 buildingSchedule.append(building_data.WallType(typeNumber=1, name="das conk creet baybee", thickness=8.0))
 buildingSchedule.append(building_data.DoorType(typeNumber=2, name="the Pearly Gates", height=84.0, width=36.0))
@@ -494,7 +495,7 @@ print("end of file")
 
 
 #remove this after testing
-'''
+
 filepath_image = "save.png"
 image = cv2.imread(filepath_image)
 machine_learning_feature_data_extractor(image, 40, building_data.Schedule())
