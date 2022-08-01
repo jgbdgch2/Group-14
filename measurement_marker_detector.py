@@ -122,6 +122,8 @@ def bind_lines(max_line, smaller_line):
     x21, y21, x22, y22 = smaller_line
     x11new, y11new, x12new, y12new = find_a_prime_b_prime((x21, y21), (x22, y22), ((x11+x12)/2, (y11+y12)/2))
     x21new, y21new, x22new, y22new = find_a_prime_b_prime((x11, y11), (x12, y12), ((x21+x22)/2, (y21+y22)/2))
+    
+    shift_flag = 0
 
     if measure_line((x11, y11, x11new, y11new)) > measure_line((x11, y11, x12new, y12new)):
         temp = x11new
@@ -142,23 +144,32 @@ def bind_lines(max_line, smaller_line):
     if measure_line((x11, y11, (x11+x12)/2, (y11+y12)/2)) < measure_line((x11new, y11new, (x11+x12)/2, (y11+y12)/2)):
         x11new = x11
         y11new = y11
+        shift_flag = shift_flag + 1
 
     if measure_line((x12, y12, (x11+x12)/2, (y11+y12)/2)) < measure_line((x12new, y12new, (x11+x12)/2, (y11+y12)/2)):
         x12new = x12
         y12new = y12
+        shift_flag = shift_flag - 1
 
     if measure_line((x21, y21, (x11+x12)/2, (y11+y12)/2)) < measure_line((x21new, y21new, (x11+x12)/2, (y11+y12)/2)):
         x21new = x21
         y21new = y21
+        shift_flag = shift_flag + 1
 
     if measure_line((x22, y22, (x11+x12)/2, (y11+y12)/2)) < measure_line((x22new, y22new, (x11+x12)/2, (y11+y12)/2)):
         x22new = x22
         y22new = y22
+        shift_flag = shift_flag - 1
+
+    if shift_flag == 0:
+        shift_flag = 1
+    else:
+        shift_flag = 0
 
     max_line_new = (x11new, y11new, x12new, y12new)
     smaller_line_new = (x21new, y21new, x22new, y22new)
 
-    return max_line_new, smaller_line_new
+    return max_line_new, smaller_line_new, shift_flag
 #implementation of an algorithm defined here
 #https://math.stackexchange.com/questions/1450858/get-a-line-segment-on-the-line-parallel-to-another-line-segment
 def find_a_prime_b_prime(point1, point2, point3):
@@ -367,7 +378,7 @@ def find_wall(full_image, bounding_box, pixelToInches):
     if np.array_equiv(smaller_line, (0, 0, 0, 0)):
         return None
 
-    new_max_line, new_smaller_line = bind_lines(max_line, smaller_line)
+    new_max_line, new_smaller_line, shift_flag = bind_lines(max_line, smaller_line)
 
     #TODO DELETE
     cv2.line(image,(new_max_line[0],new_max_line[1]),(new_max_line[2],new_max_line[3]),(255,0,255),2)
@@ -379,7 +390,8 @@ def find_wall(full_image, bounding_box, pixelToInches):
 
     windows = findWindows(image, lines, max_line, smaller_line, calculate_center(new_max_line, new_smaller_line), pixelToInches)
     #doors = findDoors()
-    return center, float(measure_line(new_max_line)), find_line_angle(max_line), segments_distance(new_max_line, new_smaller_line), windows
+    print("shift_flag", shift_flag)
+    return center, float(measure_line(new_max_line)+shift_flag*pixelToInches*2), find_line_angle(max_line), segments_distance(new_max_line, new_smaller_line), windows
 
 def findWindows(image, lines, max_line, smaller_line, center, pixelToInches):
     potential_window_panes = []
@@ -432,7 +444,7 @@ def machine_learning_feature_data_extractor(im, pixelToInches, buildingSchedule)
         x1, y1, x2, y2 = box
 
         #TODO REMOVE
-        print(det)
+        #print(det)
         cv2.rectangle(im, (x1, y1), (x2, y2), (0, 0, 255), 2)
         cv2.imwrite('bounding_boxes.png',im)
 
