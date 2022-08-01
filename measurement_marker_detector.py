@@ -352,7 +352,7 @@ def find_wall(full_image, bounding_box, pixelToInches):
 
     #TODO put this in a loop that breaks when it finds a max line and a suitable paralell line
     #returns longest line found
-    max_line = lines[10]
+    max_line = lines[0]
     for points in lines:
         if compare_lines(points, max_line) > 0:
             max_line = points
