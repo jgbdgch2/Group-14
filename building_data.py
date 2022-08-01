@@ -187,7 +187,7 @@ class WallType:
     def __init__(self, \
                 typeNumber=-1, \
                 name="Nameless", \
-                thickness=-1.0):
+                thickness=24.0):
                 #measurement_system_flag="IMPERIAL_UNITS"):
 
         #Bound and type checking goes here
@@ -308,7 +308,7 @@ class Story:
 
     #TODO type checking
     #todo update this
-    def __init__(self, bottomElevation=-1, topElevation=-1):
+    def __init__(self, bottomElevation=-1.0, topElevation=-1.0):
         self.bottomElevation = bottomElevation
         self.topElevation = topElevation
         self.listOfWalls = []
