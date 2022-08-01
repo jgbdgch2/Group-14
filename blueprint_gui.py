@@ -15,7 +15,7 @@ import cairo
 
 import building_data as bd
 import ifc_compiler as ifc
-import measurement_marker_detector as mmd
+#import measurement_marker_detector as mmd
 
 #Will added this
 import importlib
@@ -1231,7 +1231,7 @@ def erase_wall_attachment(graph, feature_dict, attachment):
     if len(feature_ID) == 1:
         feature_ID = feature_ID[0]
     else:
-        print('Something went wrong deleting')
+        print('Something went wrong erasing')
         exit(0)
     graph.delete_figure(feature_ID)
     feature_dict.pop(feature_ID)
@@ -1248,14 +1248,14 @@ def erase_wall(graph, feature_dict, wall_id):
 def delete_wall(graph, feature_dict, wall_id, list_of_walls):
     wall = feature_dict[wall_id]
     for door in wall.listOfDoors:
-        delete_wall_attachment(graph, feature_dict, door, wall.listOfDoors)
+        delete_wall_attachment(graph, feature_dict, door, wall.listOfDoors, delete=False)
     for window in wall.listOfWindows:
-        delete_wall_attachment(graph, feature_dict, window, wall.listOfWindows)
+        delete_wall_attachment(graph, feature_dict, window, wall.listOfWindows, delete=False)
     graph.delete_figure(wall_id)
     feature_dict.pop(wall_id)
     del list_of_walls[list_of_walls.index(wall)]
 
-def delete_wall_attachment(graph, feature_dict, attachment, list_attachment):
+def delete_wall_attachment(graph, feature_dict, attachment, list_attachment, delete=True):
     feature_ID = [k for k, v in feature_dict.items() if v == attachment]
     if len(feature_ID) == 1:
         feature_ID = feature_ID[0]
@@ -1264,7 +1264,9 @@ def delete_wall_attachment(graph, feature_dict, attachment, list_attachment):
         exit(0)
     graph.delete_figure(feature_ID)
     feature_dict.pop(feature_ID)
-    del list_attachment[list_attachment.index(attachment)]
+    index = list_attachment.index(attachment)
+    if delete == True:
+        list_attachment.pop(index)
 
 def dist(one, two):
     return math.sqrt( (two[0] - one[0])**2 + (two[1] - one[1])**2 )
