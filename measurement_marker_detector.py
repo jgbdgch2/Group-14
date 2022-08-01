@@ -371,6 +371,8 @@ def find_wall(full_image, bounding_box, pixelToInches):
             continue
         if compare_lines(points, smaller_line) < -20: #magic number
             continue
+        if compare_line_segments(max_line, points) < 4*pixelToInches:
+            continue
         if point_segment_distance_helper(center_of_image, points) > point_segment_distance_helper(center_of_image, smaller_line):
             smaller_line = points
 
