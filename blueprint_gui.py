@@ -1051,7 +1051,12 @@ def blueprint_schedule_creator(building_schedule, add_only=True):
             window['-DELETE SCHEDULE-'].update(visible=False)
 
 def machine_learning_features(img, buildingData, y_pixel_ratio): # Testing code for machine learning extraction
-    data = mmd.machine_learning_feature_data_extractor(img, y_pixel_ratio)
+    img.save('./blueprint_features/temp.png')
+    try:
+        img = cv2.imread("./blueprint_features/temp.png")
+    except Exception as E:
+        print('** Error {} **'.format(E))
+    data = mmd.machine_learning_feature_data_extractor(img, y_pixel_ratio, buildingData.buildingSchedule)
     if data == None:
         return buildingData
     for wall in data.listOfStories[0].listOfWalls:
@@ -1231,7 +1236,7 @@ def erase_wall_attachment(graph, feature_dict, attachment):
     if len(feature_ID) == 1:
         feature_ID = feature_ID[0]
     else:
-        print('Something went wrong deleting')
+        print('Something went wrong erasing')
         exit(0)
     graph.delete_figure(feature_ID)
     feature_dict.pop(feature_ID)
@@ -1248,14 +1253,14 @@ def erase_wall(graph, feature_dict, wall_id):
 def delete_wall(graph, feature_dict, wall_id, list_of_walls):
     wall = feature_dict[wall_id]
     for door in wall.listOfDoors:
-        delete_wall_attachment(graph, feature_dict, door, wall.listOfDoors)
+        delete_wall_attachment(graph, feature_dict, door, wall.listOfDoors, delete=False)
     for window in wall.listOfWindows:
-        delete_wall_attachment(graph, feature_dict, window, wall.listOfWindows)
+        delete_wall_attachment(graph, feature_dict, window, wall.listOfWindows, delete=False)
     graph.delete_figure(wall_id)
     feature_dict.pop(wall_id)
     del list_of_walls[list_of_walls.index(wall)]
 
-def delete_wall_attachment(graph, feature_dict, attachment, list_attachment):
+def delete_wall_attachment(graph, feature_dict, attachment, list_attachment, delete=True):
     feature_ID = [k for k, v in feature_dict.items() if v == attachment]
     if len(feature_ID) == 1:
         feature_ID = feature_ID[0]
@@ -1264,7 +1269,9 @@ def delete_wall_attachment(graph, feature_dict, attachment, list_attachment):
         exit(0)
     graph.delete_figure(feature_ID)
     feature_dict.pop(feature_ID)
-    del list_attachment[list_attachment.index(attachment)]
+    index = list_attachment.index(attachment)
+    if delete == True:
+        list_attachment.pop(index)
 
 def dist(one, two):
     return math.sqrt( (two[0] - one[0])**2 + (two[1] - one[1])**2 )
@@ -1426,12 +1433,19 @@ def main_gui():
     x_pixel_ratio = feature_path = user_distance = prior_rect = start_point1 = None
     end_point1 = graph2 = start_point2 = data = new_size = None
     blueprint_2_ID = save_path = None
+    event = 'start'
     feature_dict = {}
     # --------------------------------- Event Loop ---------------------------------
     while True:
-        event, values = window.read()
+        if event != 'start':
+            event, values = window.read()
 
         if event in (sg.WIN_CLOSED, 'Exit'): # Closes the App
+            try:
+                os.remove('GUI_instance')
+            except:
+                pass
+            settings['-CLEAN EXIT-'] = True
             break
         if bound_top and event != '-FILE LIST-': # delete the bounds if they exist
             # delete bounds
@@ -1477,6 +1491,7 @@ def main_gui():
                 graph2.erase()
                 graph2 = None
                 window.Element('-GRAPH2-').Update(visible=False)
+            settings['-CLEAN EXIT-'] = False
             save_path = None
             img = resize_img(orig_img, (new_size, new_size))
             graph1 = window["-GRAPH1-"]  # type: sg.Graph
@@ -1643,10 +1658,10 @@ def main_gui():
                         try:
                             result = mmd.feature_data_extractor(send_img,
                                                                      bounding_box,
-                                                                     x_pixel_ratio * h, 
+                                                                     x_pixel_ratio * h,
                                                                      buildingData.buildingSchedule,
                                                                      'Wall')
-                        except Exception as e: 
+                        except Exception as e:
                             print(e)
                             result = None
 
@@ -1912,13 +1927,22 @@ def main_gui():
                 popup_info('Successfully Exported!')
                 continue
             popup_info('Export Failed!')
-        elif  event in ('Load with', 'Load'):
+        elif  event in ('Load with', 'Load', 'start'):
+            if settings['-CLEAN EXIT-'] == False and event == 'start': # GUI instance recovery
+                window.refresh()
+                save_path = 'GUI_instance'
+                event = None
+            elif event == 'start':
+                event = None
+                continue
             if save_path == None or event == 'Load with':
                 save_path = sg.popup_get_file('.bd file to open')
             if save_path == None or save_path == '':
                 continue
-            orig_img, buildingData = load_funct(save_path)
             try:
+                orig_img, buildingData = load_funct(save_path)
+                if save_path == 'GUI_instance': # Clear the save path after loading the previous crash instance
+                    save_path = None
                 new_size = int(window_size[1] * image_window_percent)
                 mult = image_resolution // new_size
                 img = resize_img(orig_img, (new_size, new_size))
@@ -1946,6 +1970,7 @@ def main_gui():
                     window.Element('-EXPORT IFC-').Update(visible=True)
                     graph_draw_from_data(buildingData.listOfStories[story], graph2,
                                          feature_dict, x_pixel_ratio, folder, feature_images)
+                settings['-CLEAN EXIT-'] = False
             except:
                 popup_info('File not found!')
         elif  event in ('Save', 'Save as'):
@@ -1972,6 +1997,9 @@ def main_gui():
             if graph2 != None:
                 add_only = True
             blueprint_schedule_creator(buildingData.buildingSchedule, add_only=add_only)
+        #------------------------------ Maintain GUI instance save--------------------
+        if buildingData != None and orig_img != None and not event in ('-GRAPH1-', '-GRAPH2-'):
+            save_funct(orig_img, buildingData, 'GUI_instance')
     # --------------------------------- Close & Exit ---------------------------------
     window.close()
 
