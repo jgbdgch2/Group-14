@@ -1335,7 +1335,7 @@ def main_gui():
     graph2_menu_def = ['&Right', ['Edit', '!Duplicate', 'Insert', 'Delete', 'Toggle']]
     # First is the top menu
     menu_def = [['&File', ['&New       ALT-N', '&Save', 'Save as', '&Load', 'Load with', 'E&xit']],
-                ['&Edit', ['Extract Feature', '!Add Story', 'Add To Schedule']],
+                ['&Edit', ['&Extract Feature', '!Add Story', '&Add To Schedule']],
                 ['Se&ttings', ['&Window Settings', '!Help']]]
 
     # Second the window layout...2 columns
