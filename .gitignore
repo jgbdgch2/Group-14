@@ -1,7 +1,6 @@
-
 *.pyc
 wall-with-door.png
-blueprint_features/save.png
 save.json
-*.zip
-full_image.png
+*.toc
+blueprint_features/temp.png
+blueprint_features/wall.png

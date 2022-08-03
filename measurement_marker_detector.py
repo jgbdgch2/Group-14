@@ -237,7 +237,7 @@ def find_measurement_marker(file_name):
         endX = int(endX * rW)
         endY = int(endY * rH)
 
-    return max_line, detected text
+    return max_line, detected_text
 
 def project_point(point, line):
     x3, y3 = point
